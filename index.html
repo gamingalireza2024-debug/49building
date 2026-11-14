@@ -188,6 +188,59 @@ td.num,th.num{text-align:left;font-variant-numeric:tabular-nums}
 }
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none}
 .scrim.show{display:block}
+
+/* ============ لندینگ پیج عمومی ============ */
+.land{min-height:100vh;background:var(--bg)}
+.ltop{position:sticky;top:0;z-index:30;background:rgba(14,16,24,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.ltop-in{max-width:1180px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px}
+.ltop .lg{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px}
+.ltop .lg img{height:38px;width:38px;border-radius:8px}
+.ltop .lnav{display:flex;gap:6px;margin-right:auto}
+.ltop .lnav a{color:var(--muted);padding:8px 13px;border-radius:9px;font-weight:500;font-size:13.5px;cursor:pointer}
+.ltop .lnav a:hover{background:var(--panel2);color:var(--text)}
+.lwrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.hero{position:relative;border-radius:24px;overflow:hidden;margin:22px 0;padding:64px 40px;background-image:linear-gradient(135deg,rgba(124,92,255,.85),rgba(76,55,180,.78)),linear-gradient(160deg,#1a1438,#0e1018)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(700px 300px at 80% 10%,rgba(255,255,255,.18),transparent)}
+.hero-in{position:relative;display:grid;grid-template-columns:1.2fr 1fr;gap:30px;align-items:center}
+.hero h1{font-size:38px;font-weight:800;line-height:1.4;color:#fff;margin-bottom:12px}
+.hero p{color:rgba(255,255,255,.85);font-size:15px;max-width:480px;line-height:1.9;margin-bottom:22px}
+.hero .cta{display:flex;gap:10px;flex-wrap:wrap}
+.hero .cta .btn-primary{background:#fff;color:var(--primary-d)}
+.hero .cta .btn-ghost{border-color:rgba(255,255,255,.4);color:#fff}
+.hero-photos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hero-photo{height:200px;border-radius:16px;background-size:cover;background-position:center;box-shadow:0 12px 30px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15)}
+.hero-photo.p1{background-image:url('building1.jpg'),linear-gradient(135deg,#2a2150,#161925)}
+.hero-photo.p2{background-image:url('building2.jpg'),linear-gradient(135deg,#1b2a4a,#161925);margin-top:24px}
+@media(max-width:780px){.hero-in{grid-template-columns:1fr}.hero h1{font-size:28px}.hero-photo.p2{margin-top:0}}
+.lsec{padding:46px 0}
+.lsec h2{font-size:24px;font-weight:800;margin-bottom:6px}
+.lsec .sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+.info-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.info-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px}
+.info-card .ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
+.info-card .lb{font-size:12px;color:var(--muted);margin-bottom:4px}
+.info-card .vv{font-size:16px;font-weight:700;direction:ltr;text-align:right}
+.info-card .vv.fa{direction:rtl}
+.wa-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#25d366;color:#fff;border-radius:11px;padding:12px;font-weight:700;margin-top:8px}
+.units-section .units-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.units-section .unit-card .un{font-size:28px}
+.ann-card{background:var(--panel);border:1px solid var(--border);border-right:4px solid var(--primary);border-radius:12px;padding:16px 18px}
+.ann-card h4{font-size:15px;margin-bottom:4px}
+.ann-card .dt{font-size:11px;color:var(--faint);margin-bottom:8px}
+.ann-card .bd{font-size:13.5px;color:var(--muted);line-height:1.9;white-space:pre-wrap}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:780px){.contact-grid{grid-template-columns:1fr}}
+.contact-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px}
+.contact-card h3{font-size:16px;font-weight:700;margin-bottom:14px}
+.lfooter{border-top:1px solid var(--border);padding:26px 0;margin-top:20px;color:var(--faint);font-size:12.5px;text-align:center}
+.lfooter a{color:var(--muted)}
+.pub-unit{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:30px;max-width:760px;margin:30px auto}
+.pub-unit .back{margin-bottom:18px}
+.pub-head{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.pub-head .num{font-size:44px;font-weight:800;color:var(--primary)}
+.pub-head .meta{color:var(--muted);font-size:13px}
+.status-big{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;font-weight:700;font-size:15px}
+.land-empty{padding:60px;text-align:center;color:var(--faint)}
 </style>
 </head>
 <body>
@@ -220,6 +273,8 @@ B49.faDigits=s=>String(s==null?'':s).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[
 B49.rial=n=>{if(n==null||isNaN(n))n=0;n=Number(n);const sign=n<0?'-':'';n=Math.abs(Math.round(n));return B49.faDigits(sign+n.toLocaleString('en-US'))+' ریال';};
 B49.rialShort=n=>{if(!n)n=0;n=Number(n);const a=Math.abs(n);const s=n<0?'-':'';if(a>=1e9)return s+B49.faDigits((a/1e9).toFixed(1).replace(/\.0$/,''))+' میلیارد';if(a>=1e6)return s+B49.faDigits((a/1e6).toFixed(1).replace(/\.0$/,''))+' میلیون';return B49.rial(n);};
 B49.escape=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+B49.toEn=s=>String(s==null?'':s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+B49.fmtMoneyLive=inp=>{const raw=B49.toEn(inp.value).replace(/[^\d]/g,'');inp.value=raw?B49.faDigits(parseInt(raw).toLocaleString('en-US')):'';};
 
 // ---- تقویم شمسی (jalaali-js) ----
 B49.jNow=()=>{const d=new Date();const j=jalaali.toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());return {jy:j.jy,jm:j.jd?j.jm:j.jm,jd:j.jd,y:j.jy,m:j.jm,d:j.jd};};
@@ -254,9 +309,9 @@ B49.modal=(title,bodyHtml,footHtml='')=>{
 B49.jDateField=(name,val)=>{
   const j=B49.jNow(); let vy=j.y,vm=j.m,vd=j.d;
   if(val){const p=String(val).split('/').map(Number);if(p.length===3){vy=p[0];vm=p[1];vd=p[2];}}
-  const ys=[];for(let y=j.y+1;y>=j.y-6;y--)ys.push(`<option ${y===vy?'selected':''}>${y}</option>`);
+  const ys=[];for(let y=j.y+1;y>=j.y-6;y--)ys.push(`<option value="${y}" ${y===vy?'selected':''}>${B49.faDigits(y)}</option>`);
   const ms=B49.jMonths.map((n,i)=>`<option value="${i+1}" ${i+1===vm?'selected':''}>${n}</option>`).join('');
-  const ds=[];for(let d=1;d<=31;d++)ds.push(`<option ${d===vd?'selected':''}>${d}</option>`);
+  const ds=[];for(let d=1;d<=31;d++)ds.push(`<option value="${d}" ${d===vd?'selected':''}>${B49.faDigits(d)}</option>`);
   return `<div class="form-row"><select class="inp" data-jd="${name}-y">${ys.join('')}</select><select class="inp" data-jd="${name}-m">${ms}</select><select class="inp" data-jd="${name}-d">${ds.join('')}</select></div>`;
 };
 B49.jDateVal=(bg,name)=>{const y=bg.querySelector(`[data-jd="${name}-y"]`).value,m=bg.querySelector(`[data-jd="${name}-m"]`).value,d=bg.querySelector(`[data-jd="${name}-d"]`).value;return B49.jToG(+y,+m,+d);};
@@ -267,15 +322,27 @@ B49.isAdmin=()=>B49.profile&&B49.profile.role==='admin';
 // ---- روتر ----
 B49.routes={};
 B49.go=(h)=>{location.hash=h;};
-B49.render=async()=>{
+// رندر مسیر ادمین داخل #content (پس از mountShell)
+B49.renderAdmin=async()=>{
   const h=location.hash.replace('#','')||'dashboard';
-  const [name,...args]=h.split('/');
+  const name=h.split('/')[0];
+  const args=h.split('/').slice(1);
   const r=B49.routes[name]||B49.routes.dashboard;
   $('.topbar .tt').textContent=r.title;
-  $('#nav').querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.r===name));
+  if($('#nav'))$('#nav').querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.r===name));
   const c=$('#content'); c.innerHTML='<div class="empty">در حال بارگذاری…</div>';
   try{ await r.render(args); }catch(e){ c.innerHTML='<div class="empty">خطا در بارگذاری صفحه</div>'; console.error(e); }
-  if(window.innerWidth<=860)$('#sidebar').classList.remove('open'),$('.scrim').classList.remove('show');
+  if(window.innerWidth<=860&&$('#sidebar'))$('#sidebar').classList.remove('open');
+  if($('.scrim'))$('.scrim').classList.remove('show');
+};
+// روتر سراسری: لندینگ عمومی یا پنل ادمین
+B49.route=async()=>{
+  const h=location.hash.replace('#','')||'home';
+  const name=h.split('/')[0];
+  if(B49.PUBLIC_ROUTES.has(name)){ await B49.showLanding(h); return; }
+  if(!B49.isAdmin()){ await B49.showLanding('home'); return; }
+  if(!B49._shellOn){ B49.mountShell(); }
+  else { await B49.renderAdmin(); }
 };
 
 // ============ صفحه تنظیم اتصال به Supabase ============
@@ -321,12 +388,13 @@ B49.bindAuth=(mode='login')=>{
     if(mode==='login'){
       const {data,error}=await B49.sb.auth.signInWithPassword({email,password:pass});
       if(error){B49.toast(error.message,'err');return;}
-      await B49.loadProfile(data.user);B49.mountShell();
+      await B49.loadProfile(data.user);
+      location.hash=B49.isAdmin()?'dashboard':'home';B49.route();
     }else{
       const name=$('#au-name').value.trim();
       const {data,error}=await B49.sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
       if(error){B49.toast(error.message,'err');return;}
-      if(data.session){await B49.loadProfile(data.user);B49.mountShell();}
+      if(data.session){await B49.loadProfile(data.user);location.hash=B49.isAdmin()?'dashboard':'home';B49.route();}
       else{B49.toast('ثبت‌نام شد. در صورت فعال‌بودن تأیید ایمیل، ایمیل خود را بررسی کنید.','ok');}
     }
   };
@@ -341,10 +409,10 @@ B49.bindAuth=(mode='login')=>{
 B49.NAV=[
   {g:'مالی',items:[
     {r:'dashboard',i:'📊',t:'داشبورد'},
-    {r:'units',i:'🏢',t:'واحدها'},
     {r:'reports',i:'📈',t:'گزارش‌ها'},
   ]},
   {g:'مالی — مدیریت',items:[
+    {r:'manage-units',i:'🏢',t:'مدیریت واحدها',admin:true},
     {r:'owners',i:'👤',t:'مالکین',admin:true},
     {r:'tenants',i:'🔑',t:'مستاجرین',admin:true},
     {r:'expenses',i:'💸',t:'هزینه‌ها',admin:true},
@@ -353,7 +421,6 @@ B49.NAV=[
     {r:'payments',i:'💰',t:'پرداخت‌ها',admin:true},
   ]},
   {g:'ساکنین',items:[
-    {r:'building',i:'🏦',t:'اطلاعات ساختمان'},
     {r:'announcements',i:'📢',t:'اعلانات'},
     {r:'maintenance',i:'🛠️',t:'درخواست تعمیرات'},
     {r:'polls',i:'🗳️',t:'نظرسنجی'},
@@ -361,6 +428,7 @@ B49.NAV=[
     {r:'messages',i:'✉️',t:(a)=>a?'صندوق پیام‌ها':'پیام به مدیر'},
   ]},
   {g:'تنظیمات',items:[
+    {r:'admins',i:'🛡️',t:'کاربران و مدیران',admin:true},
     {r:'settings',i:'⚙️',t:'تنظیمات ساختمان',admin:true},
   ]},
 ];
@@ -394,7 +462,7 @@ B49.mountShell=()=>{
         <div class="topbar">
           <button class="ham" id="ham">☰</button>
           <div class="tt">داشبورد</div>
-          <div class="sp"><span class="jm">${B49.jMonthLabel(B49.jMonthStr(B49.jNow().y,B49.jNow().m))}</span></div>
+          <div class="sp"><a class="btn btn-ghost btn-sm" href="#home">🏠 بازدید سایت</a><span class="jm">${B49.jMonthLabel(B49.jMonthStr(B49.jNow().y,B49.jNow().m))}</span></div>
         </div>
         <div class="content" id="content"></div>
       </div>
@@ -404,7 +472,7 @@ B49.mountShell=()=>{
   $('#scrim').onclick=()=>{$('#sidebar').classList.remove('open');$('#scrim').classList.remove('show');};
   // شمارش پیام‌های خوانده‌نشده برای نشان مدیر
   if(B49.isAdmin()){B49.q.all('messages','*',['created_at',false]).then(d=>{B49._unread=d.filter(m=>!m.is_read).length;});}
-  B49.render();
+  B49._shellOn=true;B49.renderAdmin();
 };
 
 // ============ کمک: محاسبه مانده واحد ============
@@ -442,7 +510,7 @@ B49.routes.dashboard={title:'داشبورد',render:async()=>{
   const rate=totalDue?Math.round(totalPaid/totalDue*100):0;
   $('#content').innerHTML=`
     <div class="page-head"><h1>داشبورد</h1><span class="desc">${B49.jMonths[jn.m-1]} ${B49.faDigits(jn.y)}</span>
-      <div class="acts"><a class="btn btn-ghost btn-sm" href="#reports">📊 گزارش ماهانه</a><a class="btn btn-ghost btn-sm" href="#units">🏢 ${B49.faDigits(units.length)} واحد</a></div></div>
+      <div class="acts"><a class="btn btn-ghost btn-sm" href="#reports">📊 گزارش ماهانه</a><a class="btn btn-ghost btn-sm" href="#manage-units">🏢 ${B49.faDigits(units.length)} واحد</a></div></div>
     <div class="grid kpis">
       <div class="card kpi green"><div class="ic">⬇</div><div class="v">${B49.rialShort(payMonth)}</div><div class="sub">درآمد ماه جاری (پرداخت‌ها)</div></div>
       <div class="card kpi red"><div class="ic">⬆</div><div class="v">${B49.rialShort(expMonth)}</div><div class="sub">هزینه ماه جاری</div></div>
@@ -607,23 +675,24 @@ B49.crudForm=(cfg,row)=>{
   const isEdit=!!row;
   const body=cfg.form.map(f=>{
     let val=row?row[f.key]:'';
-    if(f.type==='money'&&val)val=B49.faDigits(val);
+    if(f.type==='money'&&val)val=B49.faDigits(Number(val).toLocaleString('en-US'));
     if(f.type==='select'){
-      let opts=f.options?f.options():[];
+      let opts=f.options?f.options():(f.optionsSource?f.optionsSource():[]);
       return `<div class="field ${f.full?'full':''}"><label>${f.label}${f.req?' *':''}</label>
         <select class="inp" name="${f.key}"><option value="">— انتخاب —</option>${opts.map(o=>`<option value="${o.value}" ${String(val)==String(o.value)?'selected':''}>${B49.escape(o.label)}</option>`).join('')}</select></div>`;
     }
     if(f.type==='textarea')return `<div class="field full"><label>${f.label}</label><textarea class="inp" name="${f.key}">${B49.escape(val)}</textarea></div>`;
     if(f.type==='jdate')return `<div class="field full"><label>${f.label}</label>${B49.jDateField(f.key,row?row[f.key]:null)}</div>`;
     if(f.type==='month'){const j=B49.jNow();let y=j.y,m=j.m;if(val){const p=String(val).split('/').map(Number);y=p[0];m=p[1];}
-      const ys=[];for(let yy=j.y+1;yy>=j.y-4;yy--)ys.push(`<option ${yy===y?'selected':''}>${yy}</option>`);
+      const ys=[];for(let yy=j.y+1;yy>=j.y-4;yy--)ys.push(`<option value="${yy}" ${yy===y?'selected':''}>${B49.faDigits(yy)}</option>`);
       const ms=B49.jMonths.map((n,i)=>`<option value="${i+1}" ${i+1===m?'selected':''}>${n}</option>`).join('');
       return `<div class="field"><label>${f.label}</label><div class="form-row"><select class="inp" data-mh="${f.key}-y">${ys.join('')}</select><select class="inp" data-mh="${f.key}-m">${ms}</select></div></div>`;}
-    const t=f.type==='money'?'number':'text';
-    return `<div class="field ${f.full?'full':''}"><label>${f.label}${f.req?' *':''}</label><input class="inp" name="${f.key}" type="${t}" value="${B49.escape(val)}" placeholder="${f.ph||''}" ${f.dir?'dir="'+f.dir+'"':''}></div>`;
+    const isMoney=f.type==='money';
+    return `<div class="field ${f.full?'full':''}"><label>${f.label}${f.req?' *':''}</label><input class="inp ${isMoney?'money-inp':''}" name="${f.key}" type="text" inputmode="${isMoney?'numeric':'text'}" value="${B49.escape(val)}" placeholder="${f.ph||(isMoney?'مثلاً ۱٬۵۰۰٬۰۰۰':'')}" ${f.dir?'dir="'+f.dir+'"':''}></div>`;
   }).join('');
   const foot=`<button class="btn btn-ghost" id="f-cancel">انصراف</button><button class="btn btn-primary" id="f-save">ذخیره</button>`;
   const m=B49.modal((isEdit?'ویرایش':'افزودن')+' — '+cfg.title,body,foot);
+  m.querySelectorAll('.money-inp').forEach(inp=>inp.addEventListener('input',()=>B49.fmtMoneyLive(inp)));
   $('#f-cancel').onclick=()=>m.remove();
   $('#f-save').onclick=async()=>{
     const obj={};
@@ -632,7 +701,7 @@ B49.crudForm=(cfg,row)=>{
       if(f.type==='select'){obj[f.key]=node.value||null;}
       else if(f.type==='jdate'){obj[f.key]=B49.jDateVal(m,f.key);}
       else if(f.type==='month'){obj[f.key]=m.querySelector(`[data-mh="${f.key}-y"]`).value+'/'+m.querySelector(`[data-mh="${f.key}-m"]`).value.padStart(2,'0');}
-      else if(f.type==='money'){const v=node.value.replace(/[^0-9-]/g,'');obj[f.key]=v?parseInt(v):0;}
+      else if(f.type==='money'){const v=B49.toEn(node.value).replace(/[^\d]/g,'');obj[f.key]=v?parseInt(v):0;}
       else {obj[f.key]=node.value.trim()||null;}
       if(f.req&&!obj[f.key]&&obj[f.key]!==0){B49.toast(f.label+' الزامی است','err');return;}
     }
@@ -1037,18 +1106,163 @@ B49.exportPDF=(cur,type)=>{
   setTimeout(()=>{w.focus();w.print();},700);
 };
 
+// ---------- مدیریت واحدها (ادمین) ----------
+B49.makeCrud({route:'manage-units',title:'مدیریت واحدها',desc:'افزودن، ویرایش و حذف واحدها و شماره‌گذاری',table:'units',order:['number',true],
+  searchKeys:['number'],
+  columns:[{key:'number',label:'شماره واحد',render:v=>B49.faDigits(v)},{key:'floor',label:'طبقه',render:v=>B49.faDigits(v)},{key:'area',label:'متراژ',render:v=>B49.faDigits(v)+' م²'}],
+  form:[{key:'number',label:'شماره واحد',req:true,dir:'ltr',ph:'مثلاً ۱۰۱'},{key:'floor',label:'طبقه',dir:'ltr',ph:'مثلاً ۱'},{key:'area',label:'متراژ (متر مربع)',dir:'ltr',ph:'مثلاً ۸۵'}]});
+
+// ---------- کاربران و مدیران (ادمین) ----------
+B49.routes.admins={title:'کاربران و مدیران',render:async()=>{
+  if(!B49.isAdmin()){$('#content').innerHTML='<div class="empty">دسترسی فقط برای مدیر</div>';return;}
+  const rows=await B49.q.all('profiles','*',['created_at',false]);
+  $('#content').innerHTML=`<div class="page-head"><h1>کاربران و مدیران</h1><span class="desc">تعریف مدیران دیگر و مدیریت دسترسی</span></div>
+    <div class="card" style="margin-bottom:14px"><div class="hint">👤 کاربران ابتدا باید در صفحه ورود با ایمیل ثبت‌نام کنند؛ سپس از اینجا می‌توانید نقش آن‌ها را به <b>مدیر</b> تغییر دهید. مدیران دسترسی کامل پنل را دارند.</div></div>
+    <div class="card" style="padding:0"><div class="tbl-wrap"><table><thead><tr><th>نام</th><th>نقش</th><th>تلفن</th><th></th></tr></thead><tbody>
+    ${rows.length?rows.map(p=>`<tr><td>${B49.escape(p.full_name||'(بدون نام)')}</td>
+      <td><span class="pill ${p.role==='admin'?'pill-admin':'pill-member'}">${p.role==='admin'?'مدیر':'عضو'}</span></td>
+      <td dir="ltr" class="muted">${B49.faDigits(p.phone||'—')}</td>
+      <td><button class="btn ${p.role==='admin'?'btn-danger':'btn-primary'} btn-sm" data-role="${p.id}" data-cur="${p.role}">${p.role==='admin'?'تنزیل به عضو':'ارتقا به مدیر'}</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">کاربری ثبت نشده است</td></tr>'}
+    </tbody></table></div></div>`;
+  $$('[data-role]').forEach(b=>b.onclick=async()=>{const nr=b.dataset.cur==='admin'?'member':'admin';
+    if(nr==='admin'&&!confirm('این کاربر به مدیر تبدیل شود؟ دسترسی کامل پنل را خواهد داشت.'))return;
+    const r=await B49.q.update('profiles',b.dataset.role,{role:nr});if(r)B49.routes.admins.render([]);});
+}};
+
+// ============ لندینگ پیج عمومی ============
+B49.PUBLIC_ROUTES=new Set(['home','unit']);
+B49.showLanding=async(h)=>{
+  B49._shellOn=false;
+  const parts=(h||'home').split('/');
+  if(parts[0]==='unit'&&parts[1])return B49.landingUnit(parts[1]);
+  await B49.preloadFinance();
+  const s=((await B49.q.all('building_settings'))[0])||{};
+  const ann=await B49.q.all('announcements','*',['created_at',false]);
+  const {units}=B49.cache.fin;
+  const byFloor={};units.forEach(u=>{byFloor[u.floor]=byFloor[u.floor]||[];byFloor[u.floor].push(u);});
+  const floors=Object.keys(byFloor).sort((a,b)=>a-b);
+  const authBtns=B49.isAdmin()
+    ? `<a class="btn btn-primary btn-sm" href="#dashboard">پنل مدیریت</a><button class="btn btn-ghost btn-sm" id="l-logout">خروج</button>`
+    : `<button class="btn btn-primary btn-sm" id="l-login">ورود مدیر</button>`;
+  let unitsHtml=floors.length?floors.map(fl=>`<div class="floor-label">طبقه ${B49.faDigits(fl)}</div>`+
+    byFloor[fl].map(u=>{const b=B49.unitBalance(u.id);const o=B49.ownerOf(u.id);
+      let cls='bal-clear',txt='تسویه';if(b.bal>0){cls='bal-debt';txt='بدهکار';}else if(b.bal<0){cls='bal-cred';txt='طلبکار';}
+      return `<div class="unit-card" onclick="location.hash='unit/${u.id}'"><div class="un">${B49.faDigits(u.number)}</div><div class="fl">طبقه ${B49.faDigits(u.floor)}</div><div class="ow">${B49.escape(o?o.name:'—')}</div><div class="bal ${cls}">${txt}${b.bal?' • '+B49.rialShort(b.bal):''}</div></div>`;}).join('')).join(''):'<div class="land-empty">هنوز واحدی ثبت نشده است.</div>';
+  const annHtml=ann.length?ann.slice(0,4).map(a=>`<div class="ann-card"><h4>${B49.escape(a.title)}</h4><div class="dt">${B49.gToJstr(a.created_at)}</div><div class="bd">${B49.escape((a.body||'').slice(0,200))}${(a.body||'').length>200?'…':''}</div></div>`).join(''):'<div class="land-empty">اعلانی ثبت نشده است.</div>';
+  $('#app').innerHTML=`
+  <div class="land">
+    <div class="ltop"><div class="ltop-in">
+      <div class="lg"><img src="logo.png">ساختمان ۴۹</div>
+      <div class="lnav">
+        <a data-sc="top">خانه</a><a data-sc="units-section">واحدها</a>
+        <a data-sc="info-section">اطلاعات حساب</a><a data-sc="ann-section">اعلانات</a><a data-sc="contact-section">ارتباط با مدیر</a>
+      </div>${authBtns}
+    </div></div>
+    <div class="lwrap" id="top">
+      <div class="hero"><div class="hero-in">
+        <div>
+          <h1>سامانه مدیریت ساختمان ۴۹</h1>
+          <p>شفافیت کامل در شارژ و هزینه‌های ساختمان. وضعیت تسویه واحد خود را به‌صورت آنلاین ببینید، اعلانات را دنبال کنید و با مدیر ساختمان در ارتباط باشید.</p>
+          <div class="cta"><button class="btn btn-primary" data-sc="units-section">🏢 مشاهده واحدها</button><button class="btn btn-ghost" data-sc="info-section">💳 شماره حساب</button></div>
+        </div>
+        <div class="hero-photos"><div class="hero-photo p1"></div><div class="hero-photo p2"></div></div>
+      </div></div>
+      <div class="lsec" id="units-section"><h2>واحدهای ساختمان</h2><div class="sub">روی واحد خود کلیک کنید تا وضعیت بدهی و تسویه را ببینید — ${B49.faDigits(units.length)} واحد</div>
+        <div class="units-section"><div class="units-grid">${unitsHtml}</div></div></div>
+      <div class="lsec" id="info-section"><h2>اطلاعات حساب ساختمان</h2><div class="sub">برای واریز شارژ از این حساب استفاده کنید</div>
+        <div class="info-cards">
+          ${s.bank_name?`<div class="info-card"><div class="ic" style="background:var(--primary-soft);color:var(--primary)">🏦</div><div class="lb">بانک</div><div class="vv fa">${B49.escape(s.bank_name)}</div></div>`:''}
+          ${s.bank_account?`<div class="info-card"><div class="ic" style="background:var(--blue-soft);color:var(--blue)">№</div><div class="lb">شماره حساب</div><div class="vv">${B49.faDigits(s.bank_account)}</div></div>`:''}
+          ${s.card_number?`<div class="info-card"><div class="ic" style="background:var(--green-soft);color:var(--green)">💳</div><div class="lb">شماره کارت</div><div class="vv">${B49.faDigits(s.card_number)}</div></div>`:''}
+          ${s.sheba?`<div class="info-card"><div class="ic" style="background:var(--amber-soft);color:var(--amber)">IR</div><div class="lb">شماره شبا</div><div class="vv">IR ${B49.faDigits(s.sheba)}</div></div>`:''}
+          ${s.manager_name?`<div class="info-card"><div class="ic" style="background:var(--primary-soft);color:var(--primary)">👤</div><div class="lb">مدیر ساختمان</div><div class="vv fa">${B49.escape(s.manager_name)}</div></div>`:''}
+        </div>
+        ${s.whatsapp_link?`<a href="${B49.escape(s.whatsapp_link)}" target="_blank" class="wa-btn">💬 گروه واتساپ ساختمان</a>`:''}
+      </div>
+      <div class="lsec" id="ann-section"><h2>اعلانات ساختمان</h2><div class="sub">آخرین اخبار و اطلاع‌رسانی‌ها</div>
+        <div class="grid" style="gap:12px">${annHtml}</div></div>
+      <div class="lsec" id="contact-section"><h2>ارتباط با مدیر ساختمان</h2><div class="sub">پیام بفرستید یا درخواست تعمیر ثبت کنید</div>
+        <div class="contact-grid">
+          <div class="contact-card"><h3>✉️ ارسال پیام به مدیر</h3>
+            <div class="field"><label>نام و نام خانوادگی</label><input class="inp" id="pm-name"></div>
+            <div class="field"><label>تلفن</label><input class="inp" id="pm-phone" dir="ltr"></div>
+            <div class="field"><label>موضوع</label><input class="inp" id="pm-sub"></div>
+            <div class="field"><label>متن پیام</label><textarea class="inp" id="pm-body" style="min-height:110px"></textarea></div>
+            <button class="btn btn-primary btn-block" id="pm-go">ارسال پیام</button></div>
+          <div class="contact-card"><h3>🛠️ ثبت درخواست تعمیرات</h3>
+            <div class="field"><label>نام</label><input class="inp" id="mt-name"></div>
+            <div class="field"><label>واحد مربوطه</label><select class="inp" id="mt-unit"><option value="">— عام (راهپله و...) —</option>${B49.unitOpts().map(o=>`<option value="${o.value}">${o.label}</option>`).join('')}</select></div>
+            <div class="field"><label>عنوان مشکل</label><input class="inp" id="mt-title" placeholder="مثلاً لامپ راهرو سوخته"></div>
+            <div class="field"><label>توضیحات</label><textarea class="inp" id="mt-desc" style="min-height:80px"></textarea></div>
+            <button class="btn btn-primary btn-block" id="mt-go">ثبت درخواست</button></div>
+        </div>
+      </div>
+      <div class="lfooter">ساختمان ۴۹ — سامانه مدیریت • <a href="#home">بازگشت به بالا</a></div>
+    </div>
+  </div>`;
+  $$('[data-sc]').forEach(a=>a.onclick=e=>{e.preventDefault();const t=document.getElementById(a.dataset.sc);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});});
+  if(B49.isAdmin()){const lo=$('#l-logout');if(lo)lo.onclick=async()=>{await B49.sb.auth.signOut();B49.user=null;B49.profile=null;location.hash='home';B49.showLanding('home');};}
+  else{const lg=$('#l-login');if(lg)lg.onclick=()=>B49.loginModal();}
+  const pm=$('#pm-go');if(pm)pm.onclick=async()=>{const name=$('#pm-name').value.trim(),body=$('#pm-body').value.trim();if(!name||!body){B49.toast('نام و متن پیام الزامی است','err');return;}const r=await B49.q.insert('messages',{from_name:name,from_user:null,subject:$('#pm-sub').value.trim(),body});if(r){['pm-name','pm-phone','pm-sub','pm-body'].forEach(i=>{const x=$('#'+i);if(x)x.value='';});}};
+  const mt=$('#mt-go');if(mt)mt.onclick=async()=>{const name=$('#mt-name').value.trim(),title=$('#mt-title').value.trim();if(!name||!title){B49.toast('نام و عنوان الزامی است','err');return;}const desc='از طرف '+name+': '+($('#mt-desc').value.trim());const r=await B49.q.insert('maintenance_requests',{unit_id:$('#mt-unit').value||null,title,description:desc,priority:'normal',created_by:null});if(r){['mt-name','mt-title','mt-desc'].forEach(i=>{const x=$('#'+i);if(x)x.value='';});$('#mt-unit').value='';}};
+};
+B49.landingUnit=async(id)=>{
+  await B49.preloadFinance();
+  const u=B49.cache.fin.units.find(x=>x.id===+id);
+  const authBtns=B49.isAdmin()?`<a class="btn btn-primary btn-sm" href="#dashboard">پنل مدیریت</a>`:`<button class="btn btn-primary btn-sm" id="l-login">ورود مدیر</button>`;
+  if(!u){$('#app').innerHTML=`<div class="land"><div class="ltop"><div class="ltop-in"><div class="lg"><img src="logo.png">ساختمان ۴۹</div><div class="lnav"><a href="#home">خانه</a></div>${authBtns}</div></div><div class="lwrap"><div class="land-empty">واحد یافت نشد. <a href="#home">بازگشت</a></div></div></div>`;if(!B49.isAdmin()){$('#l-login')&&($('#l-login').onclick=()=>B49.loginModal());}return;}
+  const o=B49.ownerOf(u.id),t=B49.tenantOf(u.id);
+  const bt=B49.unitBalance(u.id);
+  let cls='bal-clear',txt='تسویه',col='green';if(bt.bal>0){cls='bal-debt';txt='بدهکار';col='red';}else if(bt.bal<0){cls='bal-cred';txt='طلبکار';col='blue';}
+  $('#app').innerHTML=`
+  <div class="land">
+    <div class="ltop"><div class="ltop-in"><div class="lg"><img src="logo.png">ساختمان ۴۹</div><div class="lnav"><a href="#home">خانه</a><a href="#home">واحدها</a></div>${authBtns}</div></div>
+    <div class="lwrap">
+      <div class="pub-unit">
+        <a class="btn btn-ghost btn-sm back" href="#home">→ بازگشت به واحدها</a>
+        <div class="pub-head"><div class="num">${B49.faDigits(u.number)}</div><div><div style="font-size:18px;font-weight:700">واحد ${B49.faDigits(u.number)}</div><div class="meta">طبقه ${B49.faDigits(u.floor)} • ${B49.faDigits(u.area||'-')} متر مربع</div></div></div>
+        <div class="status-big" style="background:var(--${col}-soft);color:var(--${col})">${txt} ${bt.bal?'• '+B49.rial(bt.bal):''}</div>
+        <div class="divider"></div>
+        <div class="info-grid">
+          <div class="info-item"><div class="l">مالک</div><div class="v">${B49.escape(o?o.name:'— ثبت نشده')}</div></div>
+          <div class="info-item"><div class="l">مستاجر</div><div class="v">${B49.escape(t?t.name:'— (مالک ساکن)')}</div></div>
+          <div class="info-item"><div class="l">کل شارژ تعلق‌گرفته</div><div class="v">${B49.rial(bt.due)}</div></div>
+          <div class="info-item"><div class="l">کل پرداخت‌شده</div><div class="v">${B49.rial(bt.paid)}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="hint">برای مشاهده ریز پرداخت‌ها و گزارش کامل، مدیر ساختمان وارد پنل شود. در صورت اختلاف با مدیر تماس بگیرید.</div>
+      </div>
+      <div class="lfooter">ساختمان ۴۹ — سامانه مدیریت</div>
+    </div>
+  </div>`;
+  if(!B49.isAdmin()){$('#l-login')&&($('#l-login').onclick=()=>B49.loginModal());}
+};
+B49.loginModal=()=>{
+  const m=B49.modal('ورود مدیر',`
+    <div class="field"><label>ایمیل</label><input class="inp" id="lm-email" type="email" dir="ltr"></div>
+    <div class="field"><label>رمز عبور</label><input class="inp" id="lm-pass" type="password" dir="ltr"></div>
+    <div class="hint tiny">فقط مدیران ساختمان به پنل مدیریت دسترسی دارند. حساب ندارید؟ <a id="lm-signup" style="cursor:pointer;color:var(--primary);font-weight:700">ثبت‌نام</a></div>`,
+    `<button class="btn btn-ghost" id="lm-c">انصراف</button><button class="btn btn-primary" id="lm-go">ورود</button>`);
+  $('#lm-c').onclick=()=>m.remove();
+  const sg=$('#lm-signup');if(sg)sg.onclick=()=>{m.remove();$('#app').innerHTML=B49.authScreen('signup');B49.bindAuth('signup');};
+  $('#lm-go').onclick=async()=>{const email=$('#lm-email').value.trim(),pass=$('#lm-pass').value;if(!email||!pass){B49.toast('ایمیل و رمز را وارد کنید','err');return;}
+    const {data,error}=await B49.sb.auth.signInWithPassword({email,password:pass});
+    if(error){B49.toast(error.message,'err');return;}
+    await B49.loadProfile(data.user);
+    if(B49.isAdmin()){m.remove();B49.toast('خوش آمدید','ok');location.hash='dashboard';B49.route();}
+    else{B49.toast('این حساب مدیر نیست','err');await B49.sb.auth.signOut();B49.user=null;B49.profile=null;}
+  };
+};
+
 /*__APPEND__*/
 
 // ---- بوت ----
 B49.boot=async()=>{
   const app=$('#app');
-  // اگر کلید اتصال نیست → صفحه تنظیم اتصال
   if(!B49.cfg.key){ app.innerHTML=B49.setupScreen(); B49.bindSetup(); return; }
-  // بررسی نشست
   const {data:{session}}=await B49.sb.auth.getSession();
-  if(!session){ app.innerHTML=B49.authScreen(); B49.bindAuth(); return; }
-  await B49.loadProfile(session.user);
-  B49.mountShell();
+  if(session){ await B49.loadProfile(session.user); }
+  await B49.route();
 };
 B49.loadProfile=async(u)=>{
   B49.user=u;
@@ -1056,7 +1270,7 @@ B49.loadProfile=async(u)=>{
   B49.profile=data||(await B49.sb.from('profiles').select('*').eq('id',u.id).maybeSingle());
   if(!B49.profile){B49.profile={id:u.id,full_name:u.email,role:'member'};}
 };
-window.addEventListener('hashchange',B49.render);
+window.addEventListener('hashchange',B49.route);
 document.addEventListener('DOMContentLoaded',B49.boot);
 </script>
 </body>
