@@ -263,7 +263,7 @@ B49.faDigits=s=>String(s==null?'':s).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[
 B49.toEn=s=>String(s==null?'':s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 B49.rial=n=>{if(n==null||isNaN(n))n=0;n=Number(n);const sign=n<0?'-':'';n=Math.abs(Math.round(n));return B49.faDigits(sign+n.toLocaleString('en-US'))+' ریال';};
 B49.rialNum=n=>{if(n==null||isNaN(n))n=0;return B49.faDigits(Number(n).toLocaleString('en-US'));};
-B49.rialShort=n=>{if(!n)n=0;n=Number(n);const a=Math.abs(n);const s=n<0?'-':'';if(a>=1e9)return s+B49.faDigits((a/1e9).toFixed(1).replace(/\.0$/,''))+' م‌ریال';if(a>=1e6)return s+B49.faDigits((a/1e6).toFixed(1).replace(/\.0$/,''))+' م‌تومان';return B49.rial(n);};
+B49.rialShort=n=>{if(!n)n=0;n=Number(n);const a=Math.abs(n);const s=n<0?'-':'';if(a>=1e9)return s+B49.faDigits((a/1e9).toFixed(1).replace(/\.0$/,''))+' م‌ریال';if(a>=1e6)return s+B49.faDigits((a/1e6).toFixed(1).replace(/\.0$/,''))+' م‌ریال';return B49.rial(n);};
 B49.escape=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 B49.jNow=()=>{const d=new Date();const j=jalaali.toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());return {jy:j.jy,jm:j.jm,jd:j.jd};};
 B49.jMonths=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
