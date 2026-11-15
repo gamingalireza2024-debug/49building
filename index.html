@@ -607,22 +607,36 @@ B49.renderRecentTx=()=>{
 };
 
 // ===================== آپلود فایل (رسید) =====================
+// در دیتابیس فقط «مسیر» ذخیره می‌شود (نه URL). URL امضاشده‌ی کوتاه‌مدت
+// هنگام نمایش تولید می‌شود (B49.openReceipt) — امن‌تر و بدون انقضای یک‌ساله در DB.
 B49.uploadFile=async(file)=>{
   if(!file)return null;
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
-  const path=`receipts/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-  const {error}=await B49.sb.storage.from('receipts').upload(path,file,{cacheControl:'3600',upsert:false});
+  const key=`${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`; // کلید داخل باکت receipts
+  const {error}=await B49.sb.storage.from('receipts').upload(key,file,{cacheControl:'3600',upsert:false});
   if(error){B49.toast('خطا در آپلود فایل: '+B49.faMsg(error.message),'err');return null;}
-  // باکت receipts اکنون خصوصی است → از URL امضاشده (یک‌ساله) استفاده می‌کنیم، نه getPublicUrl.
-  const {data,err}=await B49.sb.storage.from('receipts').createSignedUrl(path,31536000);
-  if(err||!data){B49.toast('فایل آپلود شد ولی ساخت URL امضاشده ناموفق بود','err');return null;}
-  return data.signedUrl;
+  return key; // فقط مسیر ذخیره می‌شود
 };
+// تولید URL امضاشده‌ی کوتاه‌مدت (۱ ساعت) برای نمایش رسید خصوصی
+B49.openReceipt=async(key)=>{
+  if(!key){B49.toast('مسیر رسید نامعتبر است','err');return;}
+  try{
+    const {data,error}=await B49.sb.storage.from('receipts').createSignedUrl(key,3600);
+    if(error||!data||!data.signedUrl){B49.toast('دسترسی به رسید ناموفق بود: '+B49.faMsg(error&&error.message),'err');return;}
+    window.open(data.signedUrl,'_blank');
+  }catch(e){B49.toast('خطا در دریافت URL رسید: '+(e&&e.message||e),'err');}
+};
+// کلیک روی هر لینک رسید (data-receipt-path) → URL امضاشده تولید و باز می‌شود
+document.addEventListener('click',e=>{const a=e.target.closest('[data-receipt-path]');if(a){e.preventDefault();B49.openReceipt(a.dataset.receiptPath);}});
 
 // ===================== سابقه‌ی تغییرات (audit) =====================
+// خطاهای audit گزارش می‌شوند (ولی برای عملیات مالی، audit داخل RPC اتمیک است).
 B49.audit=async(table,row,action,reason='')=>{
   if(!B49.user)return;
-  await B49.sb.from('audit_log').insert({table_name:table,record_id:row.id,action,reason,change_data:row,actor:B49.user.id});
+  try{
+    const {error}=await B49.sb.from('audit_log').insert({table_name:table,record_id:row.id,action,reason,change_data:row,actor:B49.user.id});
+    if(error){console.error('[B49.audit] خطا در ثبت سابقه:',table,action,error);B49.toast('هشدار: ثبت سابقه‌ی تغییر ناموفق بود ('+B49.faMsg(error.message)+')','warn');}
+  }catch(e){console.error('[B49.audit] استثنا:',e);B49.toast('هشدار: ثبت سابقه‌ی تغییر با خطا مواجه شد','warn');}
 };
 
 // ===================== موتور CRUD عمومی =====================
@@ -711,13 +725,18 @@ B49.crudForm=(cfg,row)=>{
     if(cfg.seed)cfg.seed(obj);
     if(cfg.createdBy&&B49.user)obj.created_by=B49.user.id;
     let saved;
+    // اگر عملیات از طریق RPC اتمیک انجام می‌شود (پرداخت/هزینه)، audit داخل همان تراکنش ثبت می‌شود
+    // و نیازی به B49.audit جدا نیست.
     if(cfg.upsert){saved=await B49.q.upsert(cfg.table,{...obj,id:(row&&row.id)?row.id:1});if(saved)B49.audit(cfg.table,saved,(row&&row.id)?'update':'insert');}
     else if(isNew){
-      // اگر کلید طبیعی داریم (مثل prior_debts.unit_id) از upsert استفاده می‌کنیم تا رکورد تکراری خطا ندهد
-      if(cfg.onConflict){saved=await B49.q.upsertOn(cfg.table,obj,cfg.onConflict);if(saved)B49.audit(cfg.table,saved,'insert');}
+      if(cfg.onInsert){saved=await cfg.onInsert(obj);}                    // RPC اتمیک (audit داخل تراکنش)
+      else if(cfg.onConflict){saved=await B49.q.upsertOn(cfg.table,obj,cfg.onConflict);if(saved)B49.audit(cfg.table,saved,'insert');}
       else{saved=await B49.q.insert(cfg.table,obj);if(saved)B49.audit(cfg.table,saved,'insert');}
     }
-    else{const reason=prompt('دلیل ویرایش (اختیاری):')||'';saved=await B49.q.update(cfg.table,row.id,obj);if(saved)B49.audit(cfg.table,row,'update',reason);}
+    else{
+      if(cfg.onUpdate){const reason=prompt('دلیل ویرایش (اختیاری):')||'';saved=await cfg.onUpdate(row,obj,reason);}  // RPC اتمیک
+      else{const reason=prompt('دلیل ویرایش (اختیاری):')||'';saved=await B49.q.update(cfg.table,row.id,obj);if(saved)B49.audit(cfg.table,row,'update',reason);}
+    }
     if(saved){close();if(cfg.afterSave)await cfg.afterSave(saved);B49.go(cfg.route);B49.route();}
     }catch(e){console.error('[crud save]',e);B49.toast('خطای غیرمنتظره: '+(e&&e.message?e.message:e),'err');}
     finally{saveBtn.disabled=false;saveBtn.textContent=orig;}
@@ -796,22 +815,16 @@ B49.unitForm=(unit)=>{
     const areaVal=B49.toEn($('#f-area').value).replace(/[^\d.]/g,'');
     const isRented=$('#f-rented').checked;
     if(isRented&&!$('#f-tname').value.trim()){B49.toast('نام مستاجر الزامی است (چون واحد اجاره‌ای است)','err');return;}
-    const unitObj={number,floor:floorVal?parseInt(floorVal):null,area:areaVal?(areaVal.includes('.')?parseFloat(areaVal):parseInt(areaVal)):null};
-    // ذخیره‌ی اتمیک: در صورت شکست هر مرحله، مراحل قبل را برمی‌گردانیم (compensating delete)
-    // تا واحدِ یتیم (بدون مالک) باقی نماند.
-    const savedUnit=isNew?await B49.q.insert('units',unitObj):await B49.q.update('units',unit.id,unitObj);
-    if(!savedUnit){B49.toast('ذخیره‌ی واحد ناموفق بود (پیام دقیق خطا بالا نمایش داده شد)','err');return;}
-    const uid=savedUnit.id;B49.audit('units',savedUnit,isNew?'insert':'update');
-    const ownerObj={unit_id:uid,name:oname,national_code:B49.toEn($('#f-ncode').value).trim()||null,phone:B49.toEn($('#f-ophone').value).trim()||null,email:$('#f-oemail').value.trim()||null};
-    const savedOwner=o?await B49.q.update('owners',o.id,ownerObj):await B49.q.insert('owners',ownerObj);
-    if(!savedOwner){B49.toast('ذخیره‌ی مالک ناموفق بود','err');if(isNew){await B49.q.del('units',uid);B49.audit('units',savedUnit,'delete','rollback: شکست مالک');}return;}
-    B49.audit('owners',savedOwner,o?'update':'insert');
+    const unitObj={id:isNew?null:unit.id,number,floor:floorVal||null,area:areaVal||null};
+    const ownerObj={name:oname,national_code:B49.toEn($('#f-ncode').value).trim(),phone:B49.toEn($('#f-ophone').value).trim(),email:$('#f-oemail').value.trim()};
+    let tenantObj=null, tenantRemove=false;
     if(isRented){
-      const tenantObj={unit_id:uid,name:$('#f-tname').value.trim(),phone:B49.toEn($('#f-tphone').value).trim()||null,lease_start:B49.readShamsiDate(body.querySelector('[data-fwrap="tls"]'))||null,lease_end:B49.readShamsiDate(body.querySelector('[data-fwrap="tle"]'))||null};
-      const savedTenant=t?await B49.q.update('tenants',t.id,tenantObj):await B49.q.insert('tenants',tenantObj);
-      if(!savedTenant){B49.toast('ذخیره‌ی مستاجر ناموفق بود','err');if(isNew){await B49.q.del('owners',savedOwner.id);await B49.q.del('units',uid);B49.audit('owners',savedOwner,'delete','rollback: شکست مستاجر');B49.audit('units',savedUnit,'delete','rollback: شکست مستاجر');}return;}
-      B49.audit('tenants',savedTenant,t?'update':'insert');
-    }else if(t){await B49.q.del('tenants',t.id);B49.audit('tenants',t,'delete','حذف مستاجر به‌دلیل غیراجاره‌ای شدن واحد');}
+      tenantObj={name:$('#f-tname').value.trim(),phone:B49.toEn($('#f-tphone').value).trim(),lease_start:B49.readShamsiDate(body.querySelector('[data-fwrap="tls"]')),lease_end:B49.readShamsiDate(body.querySelector('[data-fwrap="tle"]'))};
+    }else if(t){tenantRemove=true;}
+    // ذخیره‌ی اتمیک via RPC: واحد+مالک+مستاجر+audit در یک تراکنش Postgres.
+    // اگر هر مرحله شکست بخورد، کل تراکنش rollback می‌شود (نه compensating delete).
+    const res=await B49.q.rpc('save_unit_owner_tenant',{p_unit:unitObj,p_owner:ownerObj,p_tenant:tenantObj,p_tenant_remove:tenantRemove});
+    if(!res){B49.toast('ذخیره‌ی واحد ناموفق بود (پیام خطا بالا نمایش داده شد)','err');return;}
     B49.toast('واحد با موفقیت ذخیره شد','ok');close();B49.go('units');B49.route();
    }catch(e){console.error('[unit save]',e);B49.toast('خطای غیرمنتظره در ذخیره: '+(e&&e.message?e.message:e),'err');}
    finally{saveBtn.disabled=false;saveBtn.textContent=orig;}
@@ -830,9 +843,19 @@ B49.makeCrud({route:'projects',title:'پروژه‌های عمرانی',desc:'م
 
 // ---- هزینه‌ها (با صندوق + دسته + رسید) ----
 B49.makeCrud({route:'expenses',title:'هزینه‌های ساختمان',desc:'ثبت هزینه به تفکیک صندوق و دسته',table:'expenses',order:['expense_date',false],createdBy:true,searchKeys:['title','reference_no'],
-  columns:[{key:'expense_date',label:'تاریخ',jdate:true},{key:'title',label:'عنوان'},{key:'fund',label:'صندوق',render:v=>`<span class="badge ${v==='construction'?'b-construction':'b-monthly'}">${v==='construction'?'عمرانی':'ماهانه'}</span>`},{key:'category_id',label:'دسته',optionsSource:B49.catOpts,render:v=>B49.catName(v)},{key:'amount',label:'مبلغ',money:true,num:true},{key:'payment_type',label:'روش',render:v=>({cash:'نقد',bank:'واریز',card:'کارت'}[v]||'—')},{key:'receipt_url',label:'رسید',render:v=>v?`<a href="${v}" target="_blank">📄</a>`:'—'}],
+  columns:[{key:'expense_date',label:'تاریخ',jdate:true},{key:'title',label:'عنوان'},{key:'fund',label:'صندوق',render:v=>`<span class="badge ${v==='construction'?'b-construction':'b-monthly'}">${v==='construction'?'عمرانی':'ماهانه'}</span>`},{key:'category_id',label:'دسته',optionsSource:B49.catOpts,render:v=>B49.catName(v)},{key:'amount',label:'مبلغ',money:true,num:true},{key:'payment_type',label:'روش',render:v=>({cash:'نقد',bank:'واریز',card:'کارت'}[v]||'—')},{key:'receipt_url',label:'رسید',render:v=>v?`<a href="#" data-receipt-path="${B49.escape(v)}" title="نمایش رسید (URL کوتاه‌مدت)">📄</a>`:'—'}],
   form:[{key:'title',label:'عنوان هزینه',req:true},{key:'amount',label:'مبلغ (ریال)',type:'money',req:true,dir:'ltr'},{key:'expense_date',label:'تاریخ',type:'jdate'},{key:'jmonth',label:'ماه شارژی',type:'month'},{key:'fund',label:'صندوق مربوطه',type:'select',req:true,options:[{value:'monthly',label:'صندوق ماهانه'},{value:'construction',label:'صندوق عمرانی'}]},{key:'category_id',label:'دسته‌بندی',type:'select',optionsSource:()=>B49.catOpts()},{key:'payment_type',label:'روش پرداخت',type:'select',options:[{value:'bank',label:'واریز'},{value:'cash',label:'نقد'},{value:'card',label:'کارت'}]},{key:'reference_no',label:'شماره رسید/فاکتور',dir:'ltr'},{key:'project_id',label:'پروژه‌ی عمرانی',type:'select',optionsSource:()=>[{value:'',label:'—'},...B49.projOpts()]},{key:'receipt_url',label:'تصویر رسید/فاکتور',type:'file'},{key:'description',label:'توضیحات',type:'textarea'}],
-  seed:o=>{if(!o.jmonth){const j=B49.jNow();o.jmonth=B49.jMonthStr(j.jy,j.jm);}if(!o.expense_date)o.expense_date=new Date().toISOString().slice(0,10);}});
+  seed:o=>{if(!o.jmonth){const j=B49.jNow();o.jmonth=B49.jMonthStr(j.jy,j.jm);}if(!o.expense_date)o.expense_date=new Date().toISOString().slice(0,10);},
+  // ثبت اتمیک via RPC record_expense: هزینه + audit در یک تراکنش؛ receipt_path فقط مسیر را نگه می‌دارد
+  onInsert:async(o)=>{
+    const eid=await B49.q.rpc('record_expense',{p_title:o.title,p_amount:Number(o.amount),p_fund:o.fund,p_category_id:o.category_id?Number(o.category_id):null,p_expense_date:o.expense_date,p_jmonth:o.jmonth||null,p_payment_type:o.payment_type||'bank',p_reference_no:o.reference_no||null,p_project_id:o.project_id?Number(o.project_id):null,p_receipt_path:o.receipt_url||null,p_description:o.description||null,p_reason:'ثبت از پنل'});
+    return eid?{id:eid,...o}:null;
+  },
+  onUpdate:async(row,o,reason)=>{
+    await B49.q.del('expenses',row.id);
+    const eid=await B49.q.rpc('record_expense',{p_title:o.title,p_amount:Number(o.amount),p_fund:o.fund,p_category_id:o.category_id?Number(o.category_id):null,p_expense_date:o.expense_date,p_jmonth:o.jmonth||null,p_payment_type:o.payment_type||'bank',p_reference_no:o.reference_no||null,p_project_id:o.project_id?Number(o.project_id):null,p_receipt_path:o.receipt_url||null,p_description:o.description||null,p_reason:reason||'ویرایش از پنل'});
+    return eid?{id:eid,...o}:null;
+  }});
 
 // ---- شارژ ماهانه (با صدور گروهی) ----
 B49.makeCrud({route:'charges',title:'شارژ ماهانه',desc:'تعلق شارژ ماهانه به واحدها',table:'charges',order:['jmonth',false],createdBy:true,filter:r=>r.type!=='construction',searchKeys:['jmonth'],
@@ -919,7 +942,19 @@ B49.makeCrud({route:'construction',title:'شارژ عمرانی',desc:'تعلق 
 B49.makeCrud({route:'payments',title:'پرداخت‌های شارژ',desc:'ثبت پرداخت‌های دریافتی از واحدها',table:'payments',order:['payment_date',false],createdBy:true,searchKeys:['jmonth','note'],
   columns:[{key:'payment_date',label:'تاریخ',jdate:true},{key:'unit_id',label:'واحد',render:v=>B49.unitOpt(v)},{key:'type',label:'صندوق',render:v=>`<span class="badge ${v==='construction'?'b-construction':'b-monthly'}">${v==='construction'?'عمرانی':'ماهانه'}</span>`},{key:'jmonth',label:'ماه شارژ',jmonth:true},{key:'amount',label:'مبلغ',money:true,num:true},{key:'method',label:'روش',render:v=>({cash:'نقد',bank:'واریز',card:'کارت'}[v]||'—')},{key:'id',label:'کد',render:v=>`<span style="color:var(--faint);font-size:11px" dir="ltr">PY-${B49.faDigits(String(v).padStart(4,'0'))}</span>`}],
   form:[{key:'unit_id',label:'واحد',type:'select',optionsSource:B49.unitOpts,req:true},{key:'amount',label:'مبلغ پرداخت (ریال)',type:'money',req:true,dir:'ltr'},{key:'type',label:'صندوق',type:'select',req:true,options:[{value:'monthly',label:'صندوق ماهانه'},{value:'construction',label:'صندوق عمرانی'}]},{key:'project_id',label:'پروژه‌ی عمرانی (برای وصول شارژ عمرانی)',type:'select',optionsSource:()=>[{value:'',label:'—'},...B49.projOpts()]},{key:'jmonth',label:'ماه شارژ مربوطه',type:'month'},{key:'payment_date',label:'تاریخ پرداخت',type:'jdate'},{key:'method',label:'روش پرداخت',type:'select',options:[{value:'card',label:'کارت'},{value:'bank',label:'واریز'},{value:'cash',label:'نقد'}]},{key:'note',label:'توضیحات',type:'textarea'}],
-  seed:o=>{if(!o.payment_date)o.payment_date=new Date().toISOString().slice(0,10);}});
+  seed:o=>{if(!o.payment_date)o.payment_date=new Date().toISOString().slice(0,10);},
+  // ثبت اتمیک via RPC record_payment: پرداخت + اعتبارسنجی تخصیص پروژه + audit در یک تراکنش
+  onInsert:async(o)=>{
+    const pid=await B49.q.rpc('record_payment',{p_unit_id:Number(o.unit_id),p_amount:Number(o.amount),p_type:o.type,p_jmonth:o.jmonth||null,p_payment_date:o.payment_date,p_method:o.method||'card',p_project_id:o.project_id?Number(o.project_id):null,p_note:o.note||null,p_reason:'ثبت از پنل'});
+    return pid?{id:pid,...o}:null;
+  },
+  onUpdate:async(row,o,reason)=>{
+    // ویرایش پرداخت: حذف قدیمی + ثبت جدید در دو RPC مجزا (هرکدام اتمیک)؛
+    // برای سادگی و حفظ اعتبارسنجی، رکورد قدیمی حذف و جدید با دلیل ثبت می‌شود.
+    await B49.q.del('payments',row.id);
+    const pid=await B49.q.rpc('record_payment',{p_unit_id:Number(o.unit_id),p_amount:Number(o.amount),p_type:o.type,p_jmonth:o.jmonth||null,p_payment_date:o.payment_date,p_method:o.method||'card',p_project_id:o.project_id?Number(o.project_id):null,p_note:o.note||null,p_reason:reason||'ویرایش از پنل'});
+    return pid?{id:pid,...o}:null;
+  }});
 
 // ---- بدهی‌های قبلی (یک مانده‌ی افتتاحیه‌ی واحد‌محور، اعمال via unique(unit_id)) ----
 B49.makeCrud({route:'prior-debts',title:'مانده‌ی افتتاحیه‌ی واحدها',desc:'مانده اولیه‌ی هر واحد هنگام شروع سیستم (یک ردیف به ازای هر واحد)',table:'prior_debts',order:['id',true],createdBy:true,searchKeys:[],onConflict:'unit_id',
