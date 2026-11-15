@@ -1,0 +1,139 @@
+name: B49 Test Lab
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+# هر لایه‌ی تست یک job مستقل است. اگر فایل‌های لازمِ یک لایه آپلود نشده باشد،
+# آن job به‌جای قرمز شدن، با موفقیت skip می‌شود (پیام در خلاصه نوشته می‌شود).
+# تنها jobی که همیشه اجرا و سبز می‌شود: accounting (فقط ۲ فایل لازم دارد).
+jobs:
+  accounting:
+    name: ۱) منطق حسابداری (Node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      # نیازی به npm install نیست — فقط توابع داخلی Node.
+      - name: Run accounting tests
+        run: node tests/unit/accounting.test.js
+      - name: Upload accounting report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accounting-report
+          path: tests/unit/.last-accounting-report.json
+          if-no-files-found: warn
+
+  db:
+    name: ۲) دیتابیس (pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Guard — فایل‌های Supabase موجود است؟
+        id: guard
+        run: |
+          if [ -f "supabase/config.toml" ] && [ -d "supabase/migrations" ] && [ -d "supabase/tests/database" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "فایل‌های Supabase موجود است — اجرای تست دیتابیس."
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "فایل‌های Supabase آپلود نشده — این job skip می‌شود (نه خطا)."
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
+        with: { node-version: '20' }
+      - name: Setup Supabase CLI
+        if: steps.guard.outputs.run == 'true'
+        uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Start local Supabase + reset (seed)
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          supabase start
+          supabase db reset
+      - name: Run pgTAP tests (4 files)
+        if: steps.guard.outputs.run == 'true'
+        run: supabase test db
+
+  e2e:
+    name: ۳) مرورگر (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Guard — فایل‌های لازم موجود است؟
+        id: guard
+        run: |
+          if [ -f "package.json" ] && [ -f "playwright.config.js" ] && [ -f "tests/e2e/app.spec.js" ] && [ -f "download/building49/index.html" ] && [ -d "supabase/migrations" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "فایل‌های لازم موجود است — اجرای تست مرورگر."
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "فایل‌های تست مرورگر آپلود نشده — این job skip می‌شود (نه خطا)."
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.run == 'true'
+        with: { node-version: '20' }
+      - name: Setup Supabase CLI
+        if: steps.guard.outputs.run == 'true'
+        uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Install deps
+        if: steps.guard.outputs.run == 'true'
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright chromium
+        if: steps.guard.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Start local Supabase + reset (seed)
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          supabase start
+          supabase db reset
+      - name: Run Playwright
+        if: steps.guard.outputs.run == 'true'
+        run: npm run test:ui
+        env:
+          B49_BASE_URL: http://localhost:3000
+          B49_LOCAL_SUPABASE_URL: http://localhost:54321
+      - name: Upload Playwright report
+        if: always() && steps.guard.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            tests/e2e/.last-e2e-report.json
+            playwright-report/
+          if-no-files-found: warn
+
+  summary:
+    name: 📊 گزارش واحد
+    runs-on: ubuntu-latest
+    needs: [accounting, db, e2e]
+    if: always()
+    timeout-minutes: 5
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Job statuses
+        run: |
+          {
+            echo "| لایه | وضعیت |"
+            echo "|---|---|"
+            echo "| ۱) منطق حسابداری (Node) | ${{ needs.accounting.result }} |"
+            echo "| ۲) دیتابیس (pgTAP) | ${{ needs.db.result }} |"
+            echo "| ۳) مرورگر (Playwright) | ${{ needs.e2e.result }} |"
+            echo ""
+            echo "**راهنما:** \`success\` = سبز. \`skipped\` برای دیتابیس/مرورگر یعنی فایل‌های آن لایه هنوز آپلود نشده — job حسابداری کافی است."
+          } >> $GITHUB_STEP_SUMMARY
