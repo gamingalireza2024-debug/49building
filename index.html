@@ -319,11 +319,11 @@ B49.q={
     if(order)q=q.order(order[0],{ascending:order[1]});
     const {data,error}=await q; if(error)B49.toast(B49.faMsg(error.message),'err'); return data||[];
   },
-  async insert(table,row){const {data,error}=await B49.sb.from(table).insert(row).select(); if(error){B49.toast(B49.faMsg(error.message),'err');return null;} return data[0];},
-  async insertMany(table,rows){const {data,error}=await B49.sb.from(table).insert(rows).select(); if(error){B49.toast(B49.faMsg(error.message),'err');return null;} return data;},
-  async upsert(table,row){const {data,error}=await B49.sb.from(table).upsert(row).select(); if(error){B49.toast(B49.faMsg(error.message),'err');return null;} return data[0];},
-  async update(table,id,row){const {data,error}=await B49.sb.from(table).update(row).eq('id',id).select(); if(error){B49.toast(B49.faMsg(error.message),'err');return null;} return data[0];},
-  async del(table,id){const {error}=await B49.sb.from(table).delete().eq('id',id); if(error){B49.toast(B49.faMsg(error.message),'err');return false;} return true;},
+  async insert(table,row){const {data,error}=await B49.sb.from(table).insert(row).select(); if(error){console.error('[B49.insert]',table,error);B49.toast(B49.faMsg(error.message),'err');return null;} return (data&&data[0])||null;},
+  async insertMany(table,rows){const {data,error}=await B49.sb.from(table).insert(rows).select(); if(error){console.error('[B49.insertMany]',table,error);B49.toast(B49.faMsg(error.message),'err');return null;} return data;},
+  async upsert(table,row){const {data,error}=await B49.sb.from(table).upsert(row).select(); if(error){console.error('[B49.upsert]',table,error);B49.toast(B49.faMsg(error.message),'err');return null;} return (data&&data[0])||null;},
+  async update(table,id,row){const {data,error}=await B49.sb.from(table).update(row).eq('id',id).select(); if(error){console.error('[B49.update]',table,error);B49.toast(B49.faMsg(error.message),'err');return null;} return (data&&data[0])||null;},
+  async del(table,id){const {error}=await B49.sb.from(table).delete().eq('id',id); if(error){console.error('[B49.del]',table,error);B49.toast(B49.faMsg(error.message),'err');return false;} return true;},
   async rpc(name,args){const {data,error}=await B49.sb.rpc(name,args); if(error){B49.toast(B49.faMsg(error.message),'err');return null;} return data;}
 };
 
@@ -736,6 +736,7 @@ B49.unitForm=(unit)=>{
   $('#mf-cancel').onclick=close;
   $('#f-rented').onchange=e=>{$('#tenant-fields').style.display=e.target.checked?'block':'none';};
   $('#mf-save').onclick=async()=>{
+   try{
     const number=B49.toEn($('#f-number').value).trim();
     if(!number){B49.toast('شماره واحد الزامی است','err');return;}
     const oname=$('#f-oname').value.trim();
@@ -745,21 +746,23 @@ B49.unitForm=(unit)=>{
     const isRented=$('#f-rented').checked;
     if(isRented&&!$('#f-tname').value.trim()){B49.toast('نام مستاجر الزامی است (چون واحد اجاره‌ای است)','err');return;}
     const unitObj={number,floor:floorVal?parseInt(floorVal):null,area:areaVal?(areaVal.includes('.')?parseFloat(areaVal):parseInt(areaVal)):null};
-    if(unit)unitObj.id=unit.id;
-    const savedUnit=await B49.q.upsert('units',unitObj);
-    if(!savedUnit){B49.toast('خطا در ذخیره‌ی واحد','err');return;}
+    // استفاده از insert (جدید) / update (ویرایش) به‌جای upsert: ستون id به‌صورت
+    // «generated always as identity» تعریف شده و upsert با id صریح خطا می‌دهد.
+    const savedUnit=isNew?await B49.q.insert('units',unitObj):await B49.q.update('units',unit.id,unitObj);
+    if(!savedUnit){B49.toast('ذخیره‌ی واحد ناموفق بود (پیام دقیق خطا بالا نمایش داده شد)','err');return;}
     const uid=savedUnit.id;B49.audit('units',savedUnit,isNew?'insert':'update');
     const ownerObj={unit_id:uid,name:oname,national_code:B49.toEn($('#f-ncode').value).trim()||null,phone:B49.toEn($('#f-ophone').value).trim()||null,email:$('#f-oemail').value.trim()||null};
-    if(o)ownerObj.id=o.id;
-    const savedOwner=await B49.q.upsert('owners',ownerObj);
-    if(savedOwner)B49.audit('owners',savedOwner,o?'update':'insert');
+    const savedOwner=o?await B49.q.update('owners',o.id,ownerObj):await B49.q.insert('owners',ownerObj);
+    if(!savedOwner){B49.toast('ذخیره‌ی مالک ناموفق بود (پیام دقیق خطا بالا نمایش داده شد)','err');return;}
+    B49.audit('owners',savedOwner,o?'update':'insert');
     if(isRented){
       const tenantObj={unit_id:uid,name:$('#f-tname').value.trim(),phone:B49.toEn($('#f-tphone').value).trim()||null,lease_start:B49.readShamsiDate(body.querySelector('[data-fwrap="tls"]'))||null,lease_end:B49.readShamsiDate(body.querySelector('[data-fwrap="tle"]'))||null};
-      if(t)tenantObj.id=t.id;
-      const savedTenant=await B49.q.upsert('tenants',tenantObj);
-      if(savedTenant)B49.audit('tenants',savedTenant,t?'update':'insert');
+      const savedTenant=t?await B49.q.update('tenants',t.id,tenantObj):await B49.q.insert('tenants',tenantObj);
+      if(!savedTenant){B49.toast('ذخیره‌ی مستاجر ناموفق بود (پیام دقیق خطا بالا نمایش داده شد)','err');return;}
+      B49.audit('tenants',savedTenant,t?'update':'insert');
     }else if(t){await B49.q.del('tenants',t.id);B49.audit('tenants',t,'delete','حذف مستاجر به‌دلیل غیراجاره‌ای شدن واحد');}
     B49.toast('واحد با موفقیت ذخیره شد','ok');close();B49.go('units');B49.route();
+   }catch(e){console.error('[unit save]',e);B49.toast('خطای غیرمنتظره در ذخیره: '+(e&&e.message?e.message:e),'err');}
   };
 };
 
