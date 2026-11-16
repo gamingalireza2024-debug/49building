@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="b49_accounting.js"></script>
 <style>
 :root{
   --bg:#0B1220; --bg2:#0D1526; --panel:#111B2E; --panel2:#16213A; --panel3:#1C2944;
@@ -366,30 +367,15 @@ B49.preloadFinance=async()=>{
 //   • fund=null (کل): prior = monthly_initial + construction_initial ؛ credit = credit_monthly + credit_construction
 //   • fund='monthly': prior = monthly_initial ؛ credit = credit_monthly
 //   • fund='construction': prior = construction_initial ؛ credit = credit_construction
-B49.unitBalance=(uid,fund=null)=>{
-  const f=B49.cache; if(!f||!f.charges)return {due:0,paid:0,prior:0,credit:0,bal:0};
-  const cf=c=>c.unit_id===uid&&((fund?((c.type||'monthly')===fund):true));
-  const pf=p=>p.unit_id===uid&&((fund?((p.type||'monthly')===fund):true));
-  const due=(f.charges.filter(cf)).reduce((s,c)=>s+Number(c.amount_due||0),0);
-  const paid=(f.payments.filter(pf)).reduce((s,p)=>s+Number(p.amount||0),0);
-  const pd=(f.prior||[]).filter(d=>d.unit_id===uid);
-  const prior=pd.reduce((s,d)=>{
-    if(fund==='monthly')return s+Number(d.monthly_initial||0);
-    if(fund==='construction')return s+Number(d.construction_initial||0);
-    return s+Number(d.monthly_initial||0)+Number(d.construction_initial||0); // کل
-  },0);
-  const credit=pd.reduce((s,d)=>{
-    if(fund==='monthly')return s+Number(d.credit_monthly||0);
-    if(fund==='construction')return s+Number(d.credit_construction||0);
-    return s+Number(d.credit_monthly||0)+Number(d.credit_construction||0); // کل
-  },0);
-  return {due,paid,prior,credit,bal:due+prior-paid-credit};
-};
-B49.fundIncome=(fund)=>(B49.cache.payments||[]).filter(p=>(p.type||'monthly')===fund).reduce((s,p)=>s+Number(p.amount||0),0);
-B49.fundExpense=(fund)=>(B49.cache.expenses||[]).filter(e=>e.fund===fund).reduce((s,e)=>s+Number(e.amount||0),0);
-B49.fundOpening=(fund)=>{const s=B49.cache.settings||{};return Number(fund==='monthly'?s.fund_monthly_opening:fund==='construction'?s.fund_construction_opening:0)||0;};
+// منطق حسابداری از ماژول مشترک b49_accounting.js — همان کد که tests/unit/accounting.test.js می‌آزماید.
+// (نه کپی جداگانه؛ تست، توابع واقعی برنامه را می‌آزماید.)
+B49.unitBalance=(uid,fund=null)=>B49Acc.unitBalance(B49.cache,uid,fund);
+B49.fundIncome=(fund)=>B49Acc.fundIncome(B49.cache,fund);
+B49.fundExpense=(fund)=>B49Acc.fundExpense(B49.cache,fund);
+B49.fundOpening=(fund)=>B49Acc.fundOpening(B49.cache,fund);
 // موجودی صندوق = موجودی افتتاحیه + درآمد واقعی − هزینه‌ی واقعی (نه جمع ساده‌ی اعداد نمایشی)
-B49.fundBalance=(fund)=>B49.fundOpening(fund)+B49.fundIncome(fund)-B49.fundExpense(fund);
+B49.fundBalance=(fund)=>B49Acc.fundBalance(B49.cache,fund);
+
 
 // ---- احراز هویت ----
 B49.isAdmin=()=>B49.profile&&B49.profile.role==='admin';
@@ -614,7 +600,7 @@ B49.uploadFile=async(file)=>{
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
   const key=`${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`; // کلید داخل باکت receipts
   const {error}=await B49.sb.storage.from('receipts').upload(key,file,{cacheControl:'3600',upsert:false});
-  if(error){B49.toast('خطا در آپلود فایل: '+B49.faMsg(error.message),'err');return null;}
+  if(error){B49.toast('خطا در آپلود فایل: '+B49.faMsg(error.message),'err');throw new Error('آپلود رسید ناموفق بود — ثبت/ویرایش هزینه متوقف شد و هیچ رکورد ناقصی ذخیره نشد');}
   return key; // فقط مسیر ذخیره می‌شود
 };
 // تولید URL امضاشده‌ی کوتاه‌مدت (۱ ساعت) برای نمایش رسید خصوصی
@@ -744,8 +730,10 @@ B49.crudForm=(cfg,row)=>{
 };
 B49.crudDel=async(cfg,row)=>{
   const reason=prompt('دلیل حذف (الزامی):');if(reason===null)return;if(!reason.trim()){B49.toast('ذکر دلیل حذف الزامی است','err');return;}
-  const ok=await B49.q.del(cfg.table,row.id);
-  if(ok){await B49.audit(cfg.table,row,'delete',reason.trim());B49.go(cfg.route);B49.route();}
+  let ok;
+  if(cfg.onDelete){ok=await cfg.onDelete(row,reason.trim());}  // RPC اتمیک (حذف + Audit در همان تراکنش)
+  else{ok=await B49.q.del(cfg.table,row.id);if(ok)await B49.audit(cfg.table,row,'delete',reason.trim());}
+  if(ok){B49.go(cfg.route);B49.route();}
 };
 
 // ===================== پیکربندی‌های CRUD =====================
@@ -759,10 +747,21 @@ B49.routes['units']=async(args)=>{
   if(q){const ql=q.toLowerCase();list=units.filter(u=>String(u.number||'').includes(ql)||(owners.find(o=>o.unit_id===u.id)?.name||'').toLowerCase().includes(ql)||(tenants.find(t=>t.unit_id===u.id)?.name||'').toLowerCase().includes(ql));}
   $('#content').innerHTML=`<div class="page-head"><div><h1>واحدها و ساکنین</h1><div class="desc">اطلاعات واحد، مالک و مستاجر را در یک فرم وارد کنید</div></div><div class="acts"><button class="btn btn-gold" id="add-unit">＋ افزودن واحد</button></div></div>
     <div class="toolbar"><input class="inp" id="crud-q" placeholder="🔍 جستجو بر اساس شماره/نام..." value="${B49.escape(q)}" style="flex:1;min-width:200px;max-width:380px"></div>
-    <div class="tbl-wrap"><table><thead><tr><th>واحد</th><th>طبقه</th><th>متراژ</th><th>مالک</th><th>مستاجر</th><th>مانده</th><th></th></tr></thead><tbody>${list.length?list.map(u=>{const o=owners.find(x=>x.unit_id===u.id);const t=tenants.find(x=>x.unit_id===u.id);const b=B49.unitBalance(u.id);return `<tr><td><b style="color:var(--gold-l)">${B49.faDigits(u.number)}</b></td><td>${B49.faDigits(u.floor||'—')}</td><td class="num">${u.area?B49.faDigits(u.area)+' م²':'—'}</td><td>${B49.escape(o?.name||'—')}</td><td>${t?B49.escape(t.name):'<span style="color:var(--faint)">مالک ساکن</span>'}</td><td class="num" style="color:${b.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(b.bal)}</td><td><div class="row-actions"><button class="btn btn-sm btn-ghost" data-edit="${u.id}">✏️</button><a onclick="B49.go('unit/${u.id}')" style="font-size:12px;cursor:pointer">📁 پرونده</a></div></td></tr>`}).join(''):'<tr><td colspan="7" class="empty">واحدی ثبت نشده است</td></tr>'}</tbody></table></div>`;
+    <div class="tbl-wrap"><table><thead><tr><th>واحد</th><th>طبقه</th><th>متراژ</th><th>مالک</th><th>مستاجر</th><th>مانده</th><th></th></tr></thead><tbody>${list.length?list.map(u=>{const o=owners.find(x=>x.unit_id===u.id);const t=tenants.find(x=>x.unit_id===u.id);const b=B49.unitBalance(u.id);return `<tr><td><b style="color:var(--gold-l)">${B49.faDigits(u.number)}</b></td><td>${B49.faDigits(u.floor||'—')}</td><td class="num">${u.area?B49.faDigits(u.area)+' م²':'—'}</td><td>${B49.escape(o?.name||'—')}</td><td>${t?B49.escape(t.name):'<span style="color:var(--faint)">مالک ساکن</span>'}</td><td class="num" style="color:${b.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(b.bal)}</td><td><div class="row-actions"><button class="btn btn-sm btn-ghost" data-edit="${u.id}">✏️</button><button class="btn btn-sm btn-danger" data-del="${u.id}" title="حذف واحد">🗑️</button><a onclick="B49.go('unit/${u.id}')" style="font-size:12px;cursor:pointer">📁 پرونده</a></div></td></tr>`}).join(''):'<tr><td colspan="7" class="empty">واحدی ثبت نشده است</td></tr>'}</tbody></table></div>`;
   $('#add-unit').onclick=()=>B49.unitForm(null);
   $$('#content [data-edit]').forEach(b=>b.onclick=()=>{const u=units.find(x=>x.id==b.dataset.edit);B49.unitForm(u);});
+  $$('#content [data-del]').forEach(b=>b.onclick=async()=>{const u=units.find(x=>x.id==b.dataset.del);await B49.deleteUnit(u);});
   if($('#crud-q'))$('#crud-q').oninput=B49._debounce(()=>{const v=$('#crud-q').value.trim();B49.go('units'+(v?'/'+encodeURIComponent(v):''));},350);
+};
+// حذف اتمیک واحد via RPC delete_unit (Audit در همان تراکنش؛ جلوگیری از حذف واحدی با سابقه‌ی مالی)
+B49.deleteUnit=async(u)=>{
+  if(!u)return;
+  const reason=prompt('دلیل حذف واحد «'+B49.faDigits(u.number)+'» (الزامی):');
+  if(reason===null)return;
+  if(!reason.trim()){B49.toast('ذکر دلیل حذف الزامی است','err');return;}
+  if(!confirm('آیا از حذف واحد «'+B49.faDigits(u.number)+'» و مالک/مستاجر/اختصاص آن مطمئن هستید؟\n(اگر این واحد شارژ/پرداخت/مانده‌ی افتتاحیه داشته باشد، حذف انجام نمی‌شود.)'))return;
+  const ok=await B49.q.rpc('delete_unit',{p_id:u.id,p_reason:reason.trim()});
+  if(ok){B49.toast('واحد حذف شد','ok');B49.go('units');B49.route();}
 };
 B49.unitForm=(unit)=>{
   const isNew=!unit;
@@ -852,10 +851,12 @@ B49.makeCrud({route:'expenses',title:'هزینه‌های ساختمان',desc:'
     return eid?{id:eid,...o}:null;
   },
   onUpdate:async(row,o,reason)=>{
-    await B49.q.del('expenses',row.id);
-    const eid=await B49.q.rpc('record_expense',{p_title:o.title,p_amount:Number(o.amount),p_fund:o.fund,p_category_id:o.category_id?Number(o.category_id):null,p_expense_date:o.expense_date,p_jmonth:o.jmonth||null,p_payment_type:o.payment_type||'bank',p_reference_no:o.reference_no||null,p_project_id:o.project_id?Number(o.project_id):null,p_receipt_path:o.receipt_url||null,p_description:o.description||null,p_reason:reason||'ویرایش از پنل'});
-    return eid?{id:eid,...o}:null;
-  }});
+    // ویرایش اتمیک via RPC update_expense: UPDATE + Audit در یک تراکنش (بدون delete-then-insert).
+    const ok=await B49.q.rpc('update_expense',{p_id:row.id,p_title:o.title,p_amount:Number(o.amount),p_fund:o.fund,p_category_id:o.category_id?Number(o.category_id):null,p_expense_date:o.expense_date,p_jmonth:o.jmonth||null,p_payment_type:o.payment_type||'bank',p_reference_no:o.reference_no||null,p_project_id:o.project_id?Number(o.project_id):null,p_receipt_path:o.receipt_url||null,p_description:o.description||null,p_reason:reason||'ویرایش از پنل'});
+    return ok?{id:row.id,...o}:null;
+  },
+  onDelete:async(row,reason)=>{return await B49.q.rpc('delete_expense',{p_id:row.id,p_reason:reason});}  // حذف اتمیک + Audit
+  });
 
 // ---- شارژ ماهانه (با صدور گروهی) ----
 B49.makeCrud({route:'charges',title:'شارژ ماهانه',desc:'تعلق شارژ ماهانه به واحدها',table:'charges',order:['jmonth',false],createdBy:true,filter:r=>r.type!=='construction',searchKeys:['jmonth'],
@@ -867,16 +868,20 @@ B49.bulkCharge=()=>{
   const units=B49.cache.units||[];
   const modal=el('div','modal-bg');
   const cur=B49.curJMonth();
-  modal.innerHTML=`<div class="modal"><div class="modal-head"><h2>⚡ صدور گروهی شارژ ماهانه</h2><div class="x">✕</div></div><div class="modal-body">
+  modal.innerHTML=`<div class="modal"><div class="modal-head"><h2>⚡ صدور گروهی شارژ (ماهانه + عمرانی)</h2><div class="x">✕</div></div><div class="modal-body">
     <div class="field form-row"><label>ماه شارژ <span class="req">*</span></label><div data-fwrap="bk">${B49.monthPicker('bk',cur)}</div></div>
-    <div class="field form-row"><label>روش محاسبه</label><select class="inp" id="bk-method"><option value="equal">مساوی بین همه‌ی واحدها</option><option value="area">بر اساس متراژ</option><option value="custom">مبلغ اختصاصی هر واحد</option></select></div>
-    <div id="bk-amount-wrap"><div class="field form-row"><label>مبلغ کل یا مبلغ هر واحد (ریال) <span class="req">*</span></label><input class="inp" id="bk-amount" type="text" dir="ltr" inputmode="numeric" placeholder="مبلغ به ریال"></div></div>
+    <div class="field form-row"><label>روش محاسبه</label><select class="inp" id="bk-method"><option value="equal">مساوی بین همه‌ی واحدها</option><option value="area">بر اساس متراژ</option><option value="custom">مبلغ اختصاصی هر واحد (فقط ماهانه)</option></select></div>
+    <div id="bk-amount-wrap" style="display:flex;gap:10px">
+      <div class="field form-row" style="flex:1"><label>مبلغ شارژ ماهانه (ریال)</label><input class="inp" id="bk-amount" type="text" dir="ltr" inputmode="numeric" placeholder="۰ یا مبلغ کل"></div>
+      <div class="field form-row" style="flex:1"><label>مبلغ شارژ عمرانی (ریال)</label><input class="inp" id="bk-amount-c" type="text" dir="ltr" inputmode="numeric" placeholder="۰ یا مبلغ کل"></div>
+    </div>
     <div id="bk-custom" style="display:none;max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:9px;padding:8px"></div>
-    <div class="hint" style="background:var(--gold-soft);border:1px solid var(--border-2);color:var(--gold-l);font-size:12px;border-radius:9px;padding:10px;margin-top:12px">واحدهایی که قبلاً برای این ماه شارژ ثبت شده، نادیده گرفته می‌شوند (جلوگیری از صدور تکراری).</div>
+    <div class="hint" style="background:var(--gold-soft);border:1px solid var(--border-2);color:var(--gold-l);font-size:12px;border-radius:9px;padding:10px;margin-top:12px">مبلغ هر صندوق جداگانه وارد شود؛ هرکدام که ۰ باشد صادر نمی‌شود. واحدهایی که قبلاً برای آن ماه+صندوق شارژ دارند، نادیده گرفته می‌شوند (جلوگیری از تکرار).</div>
     <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-gold" id="bk-go">صدور شارژ</button><button class="btn btn-ghost" id="bk-cancel">انصراف</button></div>
     </div></div>`;
   document.body.appendChild(modal);
   if($('#bk-amount'))B49.moneyField($('#bk-amount'));
+  if($('#bk-amount-c'))B49.moneyField($('#bk-amount-c'));
   const close=()=>modal.remove();
   modal.querySelector('.x').onclick=close;modal.onclick=e=>{if(e.target===modal)close();};
   $('#bk-cancel').onclick=close;
@@ -891,43 +896,37 @@ B49.bulkCharge=()=>{
     const jmonth=B49.readMonthPicker($('[data-fwrap="bk"]'));
     if(!jmonth){B49.toast('ماه شارژ را انتخاب کنید','err');goBtn.disabled=false;return;}
     const method=$('#bk-method').value;
-    // برای idempotency: هم cache را فیلتر می‌کنیم و هم در DB با upsert+ignoreDuplicates
-    // (unique unit_id,jmonth,type) در برابر ثبت هم‌زمان/تکراری مقاوم است.
-    const existing=new Set((B49.cache.charges||[]).filter(c=>c.jmonth===jmonth&&c.type!=='construction').map(c=>c.unit_id));
-    const pending=units.filter(u=>!existing.has(u.id));
-    if(!pending.length){B49.toast('برای همه‌ی واحدها در این ماه قبلاً شارژ ثبت شده','warn');goBtn.disabled=false;return;}
-    let rows=[];
+    const amtM=parseInt(B49.toEn($('#bk-amount').value).replace(/[^\d]/g,'')||'0');
+    const amtC=parseInt(B49.toEn($('#bk-amount-c').value).replace(/[^\d]/g,'')||'0');
+    // واحدهای فاقد شارژ برای هر صندوق (جداگانه — جلوگیری از تکرار)
+    const existingM=new Set((B49.cache.charges||[]).filter(c=>c.jmonth===jmonth&&c.type==='monthly').map(c=>c.unit_id));
+    const existingC=new Set((B49.cache.charges||[]).filter(c=>c.jmonth===jmonth&&c.type==='construction').map(c=>c.unit_id));
+    let rowsM=[],rowsC=[];
     if(method==='equal'){
-      const amt=parseInt(B49.toEn($('#bk-amount').value).replace(/[^\d]/g,'')||'0');
-      if(!amt){B49.toast('مبلغ را وارد کنید','err');goBtn.disabled=false;return;}
-      pending.forEach(u=>rows.push({unit_id:u.id,jmonth,amount_due:amt,type:'monthly',created_by:B49.user.id}));
+      if(amtM>0)units.filter(u=>!existingM.has(u.id)).forEach(u=>rowsM.push({unit_id:u.id,amount_due:amtM}));
+      if(amtC>0)units.filter(u=>!existingC.has(u.id)).forEach(u=>rowsC.push({unit_id:u.id,amount_due:amtC}));
+    }else if(method==='area'){
+      if(amtM>0){const pend=units.filter(u=>!existingM.has(u.id));const sh=B49Acc.distributeByArea(amtM,pend);pend.forEach((u,i)=>rowsM.push({unit_id:u.id,amount_due:sh[i]}));}
+      if(amtC>0){const pend=units.filter(u=>!existingC.has(u.id));const sh=B49Acc.distributeByArea(amtC,pend);pend.forEach((u,i)=>rowsC.push({unit_id:u.id,amount_due:sh[i]}));}
+    }else{ // custom: فقط ماهانه (مبلغ اختصاصی هر واحد)
+      $$('.bk-u').forEach(i=>{const v=parseInt(B49.toEn(i.value).replace(/[^\d]/g,'')||'0');if(v){const uid=+i.dataset.uid;if(!existingM.has(uid))rowsM.push({unit_id:uid,amount_due:v});}});
     }
-    else if(method==='area'){
-      const amt=parseInt(B49.toEn($('#bk-amount').value).replace(/[^\d]/g,'')||'0');
-      if(!amt){B49.toast('مبلغ کل را وارد کنید','err');goBtn.disabled=false;return;}
-      const total=pending.reduce((s,u)=>s+Number(u.area||0),0);
-      if(total<=0){
-        // متراژ صفر/فاقد → تقسیم مساوی + توزیع باقی‌مانده
-        const base=Math.floor(amt/pending.length), rem=amt-base*pending.length;
-        pending.forEach((u,i)=>rows.push({unit_id:u.id,jmonth,amount_due:base+(i<rem?1:0),type:'monthly',created_by:B49.user.id}));
-      }else{
-        // سهم هر واحد بر اساس متراژ؛ جمع گردشده‌ها ممکن است ≠ amt → باقی‌مانده به اولین واحدها
-        let allocated=0;const shares=pending.map(u=>{const s=Math.round(amt*(Number(u.area||0)/total));allocated+=s;return s;});
-        let diff=amt-allocated; // می‌تواند مثبت یا منفی باشد
-        for(let i=0;i<pending.length&&diff!==0;i++){shares[i]+=diff>0?1:-1;diff+=diff>0?-1:1;}
-        pending.forEach((u,i)=>rows.push({unit_id:u.id,jmonth,amount_due:shares[i],type:'monthly',created_by:B49.user.id}));
-      }
+    if(!rowsM.length&&!rowsC.length){B49.toast('مبلغی وارد نشده یا همه‌ی واحدها قبلاً شارژ دارند','err');goBtn.disabled=false;return;}
+    let insM=0,skipM=0,insC=0,skipC=0;
+    // صدور گروهی اتمیک via RPC bulk_charge — هر صندوق جداگانه (هرکدام اتمیک + Audit)
+    if(rowsM.length){
+      const out=await B49.q.rpc('bulk_charge',{p_jmonth:jmonth,p_type:'monthly',p_rows:rowsM,p_reason:'صدور گروهی ماهانه'});
+      if(!out){goBtn.disabled=false;return;}
+      insM=out.filter(r=>!r.skipped).length;skipM=out.filter(r=>r.skipped).length;
     }
-    else{
-      $$('.bk-u').forEach(i=>{const v=parseInt(B49.toEn(i.value).replace(/[^\d]/g,'')||'0');if(v){const uid=+i.dataset.uid;if(!existing.has(uid))rows.push({unit_id:uid,jmonth,amount_due:v,type:'monthly',created_by:B49.user.id});}});
-      if(!rows.length){B49.toast('مبلغ اختصاصی هیچ واحدی وارد نشده','err');goBtn.disabled=false;return;}
+    if(rowsC.length){
+      const out=await B49.q.rpc('bulk_charge',{p_jmonth:jmonth,p_type:'construction',p_rows:rowsC,p_reason:'صدور گروهی عمرانی'});
+      if(!out){goBtn.disabled=false;return;}
+      insC=out.filter(r=>!r.skipped).length;skipC=out.filter(r=>r.skipped).length;
     }
-    // upsert با ignoreDuplicates: رکوردهای تکراری (ثبت هم‌زمان توسط ادمین دیگر) نادیده گرفته می‌شوند
-    const {data,error}=await B49.sb.from('charges').upsert(rows,{onConflict:'unit_id,jmonth,type',ignoreDuplicates:true}).select();
-    if(error){B49.toast('خطا در صدور شارژ: '+B49.faMsg(error.message),'err');goBtn.disabled=false;return;}
-    const inserted=(data||[]).length;
-    if(inserted===0){B49.toast('همه‌ی شارژها قبلاً ثبت شده بودند (تکراری)','warn');}
-    else B49.toast(B49.faDigits(inserted)+' شارژ صادر شد'+(inserted<rows.length?' ('+B49.faDigits(rows.length-inserted)+' تکراری نادیده گرفته شد)':''),'ok');
+    const totIns=insM+insC,totSkip=skipM+skipC;
+    if(totIns===0){B49.toast('همه‌ی شارژها قبلاً ثبت شده بودند (تکراری)','warn');}
+    else B49.toast(B49.faDigits(totIns)+' شارژ صادر شد'+(totSkip>0?' ('+B49.faDigits(totSkip)+' تکراری نادیده گرفته شد)':'')+(insM?' — ماهانه: '+B49.faDigits(insM):'')+(insC?' — عمرانی: '+B49.faDigits(insC):''),'ok');
     close();B49.go('charges');B49.route();
   };
 };
@@ -949,18 +948,23 @@ B49.makeCrud({route:'payments',title:'پرداخت‌های شارژ',desc:'ثب
     return pid?{id:pid,...o}:null;
   },
   onUpdate:async(row,o,reason)=>{
-    // ویرایش پرداخت: حذف قدیمی + ثبت جدید در دو RPC مجزا (هرکدام اتمیک)؛
-    // برای سادگی و حفظ اعتبارسنجی، رکورد قدیمی حذف و جدید با دلیل ثبت می‌شود.
-    await B49.q.del('payments',row.id);
-    const pid=await B49.q.rpc('record_payment',{p_unit_id:Number(o.unit_id),p_amount:Number(o.amount),p_type:o.type,p_jmonth:o.jmonth||null,p_payment_date:o.payment_date,p_method:o.method||'card',p_project_id:o.project_id?Number(o.project_id):null,p_note:o.note||null,p_reason:reason||'ویرایش از پنل'});
-    return pid?{id:pid,...o}:null;
-  }});
+    // ویرایش اتمیک via RPC update_payment: UPDATE + اعتبارسنجی مجدد تخصیص پروژه + Audit در یک تراکنش.
+    const ok=await B49.q.rpc('update_payment',{p_id:row.id,p_unit_id:Number(o.unit_id),p_amount:Number(o.amount),p_type:o.type,p_jmonth:o.jmonth||null,p_payment_date:o.payment_date,p_method:o.method||'card',p_project_id:o.project_id?Number(o.project_id):null,p_note:o.note||null,p_reason:reason||'ویرایش از پنل'});
+    return ok?{id:row.id,...o}:null;
+  },
+  onDelete:async(row,reason)=>{return await B49.q.rpc('delete_payment',{p_id:row.id,p_reason:reason});}  // حذف اتمیک + Audit
+  });
 
 // ---- بدهی‌های قبلی (یک مانده‌ی افتتاحیه‌ی واحد‌محور، اعمال via unique(unit_id)) ----
 B49.makeCrud({route:'prior-debts',title:'مانده‌ی افتتاحیه‌ی واحدها',desc:'مانده اولیه‌ی هر واحد هنگام شروع سیستم (یک ردیف به ازای هر واحد)',table:'prior_debts',order:['id',true],createdBy:true,searchKeys:[],onConflict:'unit_id',
   columns:[{key:'unit_id',label:'واحد',render:v=>B49.unitOpt(v)},{key:'monthly_initial',label:'بدهی ماهانه',money:true,num:true},{key:'construction_initial',label:'بدهی عمرانی',money:true,num:true},{key:'credit_monthly',label:'طلب ماهانه',money:true,num:true,render:(v,r)=>`<span style="color:var(--green)">${B49.rial(v)}</span>`},{key:'credit_construction',label:'طلب عمرانی',money:true,num:true,render:(v,r)=>`<span style="color:var(--green)">${B49.rial(v)}</span>`},{key:'as_of_date',label:'تاریخ شروع',jdate:true},{key:'note',label:'توضیحات'}],
   form:[{key:'unit_id',label:'واحد',type:'select',optionsSource:B49.unitOpts,req:true},{key:'monthly_initial',label:'مانده بدهی ماهانه (ریال)',type:'money',dir:'ltr'},{key:'construction_initial',label:'مانده بدهی عمرانی (ریال)',type:'money',dir:'ltr'},{key:'credit_monthly',label:'مانده طلب ماهانه (ریال)',type:'money',dir:'ltr'},{key:'credit_construction',label:'مانده طلب عمرانی (ریال)',type:'money',dir:'ltr'},{key:'as_of_date',label:'تاریخ شروع مانده',type:'jdate'},{key:'note',label:'توضیحات و مستندات',type:'textarea'}],
-  seed:o=>{if(!o.as_of_date)o.as_of_date=new Date().toISOString().slice(0,10);}});
+  seed:o=>{if(!o.as_of_date)o.as_of_date=new Date().toISOString().slice(0,10);},
+  // ثبت/ویرایش/حذف اتمیک via RPC save_prior_debt / delete_prior_debt (Audit در همان تراکنش)
+  onInsert:async(o)=>{const id=await B49.q.rpc('save_prior_debt',{p_unit_id:Number(o.unit_id),p_monthly_initial:Number(o.monthly_initial)||0,p_construction_initial:Number(o.construction_initial)||0,p_credit_monthly:Number(o.credit_monthly)||0,p_credit_construction:Number(o.credit_construction)||0,p_as_of_date:o.as_of_date,p_note:o.note||null,p_reason:'ثبت از پنل'});return id?{id,...o}:null;},
+  onUpdate:async(row,o,reason)=>{const id=await B49.q.rpc('save_prior_debt',{p_unit_id:Number(o.unit_id),p_monthly_initial:Number(o.monthly_initial)||0,p_construction_initial:Number(o.construction_initial)||0,p_credit_monthly:Number(o.credit_monthly)||0,p_credit_construction:Number(o.credit_construction)||0,p_as_of_date:o.as_of_date,p_note:o.note||null,p_reason:reason||'ویرایش از پنل'});return id?{id:row.id,...o}:null;},
+  onDelete:async(row,reason)=>{return await B49.q.rpc('delete_prior_debt',{p_unit_id:Number(row.unit_id),p_reason:reason});}
+  });
 
 // ---- ساکنین / دسترسی واحدها (resident_units با کلید ترکیبی unit_id+user_id، بدون ستون id) ----
 // makeCrud بر اساس id کار می‌کند ولی resident_units ستون id ندارد → route اختصاصی.
@@ -1064,7 +1068,17 @@ B49.exportPDF=(filename,title,subtitle,cols,rows,summary)=>{
   </div>`;
   const holder=el('div','',html);holder.style.cssText='position:fixed;left:-9999px;top:0;z-index:-1';document.body.appendChild(holder);
   const node=$('#pdf-doc');
-  html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true,allowTaint:true}).then(canvas=>{
+  // فونت فارسی Vazirmatn را پیش‌بارگذاری کن تا html2canvas حروف فارسی را درست رندر کند
+  // (در غیر این صورت، capture پیش از بارگذاری فونت انجام می‌شود و حروف به‌هم‌ریخته/خالی می‌شوند).
+  const readyFonts=(async()=>{
+    try{
+      if(document.fonts){
+        await Promise.all([document.fonts.load('400 16px Vazirmatn'),document.fonts.load('700 16px Vazirmatn'),document.fonts.load('800 16px Vazirmatn')]);
+        await document.fonts.ready;
+      }
+    }catch(e){/* با fallback Tahoma ادامه می‌دهیم */}
+  })();
+  readyFonts.then(()=>html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true,allowTaint:true,logging:false})).then(canvas=>{
     const img=canvas.toDataURL('image/jpeg',0.92);
     const pdf=new jsPDF('p','mm','a4');
     const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
@@ -1103,15 +1117,9 @@ B49.reportDefs=[
  {id:'unit-ledger',icon:'📁',title:'گردش حساب هر واحد',desc:'برای یک واحد انتخاب کنید',filters:{unit:true},
   build(f){if(!f.unitId)return {columns:[{key:'x',label:'گزارش'}],rows:[{x:'ابتدا یک واحد انتخاب کنید'}],summary:[]};const uid=+f.unitId;return B49.buildUnitLedgerReport(uid);}},
  {id:'project',icon:'⚙️',title:'مالی پروژه‌های عمرانی',desc:'بودجه، شارژ صادرشده، وصول‌شده، بدهی باقی، هزینه واقعی، مانده نقدی، پیشرفت',filters:{},
-  build(f){const rows=(B49.cache.projects||[]).map(p=>{
-    const issued=(B49.cache.charges||[]).filter(c=>c.project_id===p.id&&c.type==='construction').reduce((s,c)=>s+Number(c.amount_due||0),0);     // شارژ عمرانی صادرشده
-    const collected=(B49.cache.payments||[]).filter(pay=>pay.project_id===p.id).reduce((s,pay)=>s+Number(pay.amount||0),0);                        // وجه وصول‌شده (تخصیص‌یافته به پروژه)
-    const exp=(B49.cache.expenses||[]).filter(e=>e.project_id===p.id).reduce((s,e)=>s+Number(e.amount||0),0);                                       // هزینه‌ی واقعی پروژه
-    const remaining=issued-collected;     // بدهی باقی‌مانده‌ی واحدها برای این پروژه
-    const cash=collected-exp;             // مانده نقدی پروژه = وصول − هزینه
-    const progress=issued>0?Math.round(collected/issued*100):(p.budget_approved>0?Math.round(exp/p.budget_approved*100):0); // درصد پیشرفت مالی
-    return {n:p.name,b:p.budget_approved,inc:issued,col:collected,rem:remaining,exp,bal:cash,pr:progress};
-  }).filter(r=>r.n);return {columns:[{key:'n',label:'پروژه'},{key:'b',label:'بودجه مصوب',num:true,render:v=>B49.rial(v)},{key:'inc',label:'شارژ صادرشده',num:true,render:v=>B49.rial(v)},{key:'col',label:'وصول‌شده',num:true,render:v=>B49.rial(v)},{key:'rem',label:'بدهی باقی',num:true,render:v=>B49.rial(v)},{key:'exp',label:'هزینه واقعی',num:true,render:v=>B49.rial(v)},{key:'bal',label:'مانده نقدی',num:true,render:v=>B49.rial(v)},{key:'pr',label:'پیشرفت مالی',num:true,render:v=>B49.faDigits(v)+'%'}],rows,summary:[{label:'تعداد پروژه',value:B49.faDigits(rows.length)},{label:'مجموع وصول‌شده',value:B49.rial(rows.reduce((s,r)=>s+r.col,0))},{label:'مجموع هزینه',value:B49.rial(rows.reduce((s,r)=>s+r.exp,0))}]};}},
+  build(f){const rows=B49Acc.projectReport(B49.cache.projects||[],B49.cache.charges||[],B49.cache.payments||[],B49.cache.expenses||[])
+    .map(r=>({n:r.name,b:r.budget,inc:r.issued,col:r.collected,rem:r.remaining,exp:r.exp,bal:r.cash,pr:r.progress}))
+    .filter(r=>r.n);return {columns:[{key:'n',label:'پروژه'},{key:'b',label:'بودجه مصوب',num:true,render:v=>B49.rial(v)},{key:'inc',label:'شارژ صادرشده',num:true,render:v=>B49.rial(v)},{key:'col',label:'وصول‌شده',num:true,render:v=>B49.rial(v)},{key:'rem',label:'بدهی باقی',num:true,render:v=>B49.rial(v)},{key:'exp',label:'هزینه واقعی',num:true,render:v=>B49.rial(v)},{key:'bal',label:'مانده نقدی',num:true,render:v=>B49.rial(v)},{key:'pr',label:'پیشرفت مالی',num:true,render:v=>B49.faDigits(v)+'%'}],rows,summary:[{label:'تعداد پروژه',value:B49.faDigits(rows.length)},{label:'مجموع وصول‌شده',value:B49.rial(rows.reduce((s,r)=>s+r.col,0))},{label:'مجموع هزینه',value:B49.rial(rows.reduce((s,r)=>s+r.exp,0))}]};}},
  {id:'fund-balances',icon:'🏦',title:'موجودی صندوق‌ها',desc:'موجودی هر دو صندوق',filters:{},
   build(f){const fm=B49.fundBalance('monthly'),fc=B49.fundBalance('construction');return {columns:[{key:'k',label:'صندوق'},{key:'v',label:'موجودی',num:true,render:v=>B49.rial(v)}],rows:[{k:'صندوق شارژ ماهانه',v:fm},{k:'صندوق شارژ عمرانی',v:fc},{k:'مجموع',v:fm+fc}],summary:[{label:'مجموع موجودی',value:B49.rial(fm+fc)}]};}},
  {id:'yearly',icon:'📅',title:'عملکرد مالی سالانه',desc:'درآمد/هزینه/مانده سالانه',filters:{},
@@ -1178,11 +1186,8 @@ B49.unitLedgerRows=(uid)=>{
   });
   (B49.cache.charges||[]).filter(c=>c.unit_id===uid).forEach(c=>{const fk=(c.type||'monthly');const jm=c.jmonth;let dt=c.created_at;if(jm){const p=jm.split('/').map(Number);if(p.length===2){try{dt=B49.jToG(p[0],p[1],1)}catch(e){}}}rows.push({date:dt,type:'شارژ',fundKey:fk,fund:fk==='monthly'?'ماهانه':'عمرانی',desc:'شارژ '+(fk==='monthly'?'ماهانه':'عمرانی')+' — '+B49.jMonthLabel(jm),debit:Number(c.amount_due||0),credit:0});});
   (B49.cache.payments||[]).filter(p=>p.unit_id===uid).forEach(p=>{const fk=(p.type||'monthly');rows.push({date:p.payment_date,type:'پرداخت',fundKey:fk,fund:fk==='monthly'?'ماهانه':'عمرانی',desc:'پرداخت'+(p.jmonth?' — ماه '+B49.jMonthLabel(p.jmonth):'')+(p.method?' ('+({cash:'نقد',bank:'واریز',card:'کارت'}[p.method]||'')+')':''),debit:0,credit:Number(p.amount||0)});});
-  rows.sort((a,b)=>new Date(a.date)-new Date(b.date));
-  // دو عدادار مستقل برای گردش تجمعی
-  let runM=0,runC=0;
-  rows.forEach(r=>{if(r.fundKey==='monthly'){runM+=r.debit-r.credit;r.run=runM;}else{runC+=r.debit-r.credit;r.run=runC;}});
-  return rows;
+  // گردش تجمعی از ماژول مشترک b49_accounting.js (runningBalance) — منطق تست‌شده.
+  return B49Acc.runningBalance(rows);
 };
 B49.buildUnitLedgerReport=(uid)=>{
   const rows=B49.unitLedgerRows(uid);
