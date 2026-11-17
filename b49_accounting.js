@@ -39,6 +39,19 @@
     return { due, paid, prior, credit, bal: due + prior - paid - credit };
   }
 
+  // ---- مجموع بدهی یک واحد (مستقل‌سازی دو صندوق — بدون تهاتر) ----
+  // صندوق ماهانه و عمرانی کاملاً مستقل‌اند: اعتبار (overpayment) یک صندوق
+  // هرگز بدهی صندوق دیگر را خالص نمی‌کند. هر صندوق در صفر floor می‌شود
+  // (اعتبار منفی نشان داده نمی‌شود، فقط بدهی مثبت محاسبه می‌شود).
+  // نتیجه = max(0, مانده_ماهانه) + max(0, مانده_عمرانی).
+  // این تابع برای تمام محل‌های «مجموع بدهی» / «بدهکار یا تسویه» / داشبورد
+  // و گزارش بدهکاران استفاده می‌شود (به‌جای unitBalance با fund=null که net می‌کرد).
+  function unitTotalDebt(cache, uid) {
+    const m = unitBalance(cache, uid, 'monthly').bal;
+    const c = unitBalance(cache, uid, 'construction').bal;
+    return Math.max(0, m) + Math.max(0, c);
+  }
+
   // ---- درآمد/هزینه/افتتاحیه/مانده‌ی یک صندوق ----
   function fundIncome(cache, fund) {
     return (cache.payments || []).filter(p => (p.type || 'monthly') === fund).reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -155,7 +168,7 @@
   }
 
   return {
-    unitBalance, fundIncome, fundExpense, fundOpening, fundBalance,
+    unitBalance, unitTotalDebt, fundIncome, fundExpense, fundOpening, fundBalance,
     distributeEqual, distributeByArea, projectReport,
     runningBalance, buildLedgerRows, commit
   };
