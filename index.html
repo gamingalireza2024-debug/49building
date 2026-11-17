@@ -370,6 +370,7 @@ B49.preloadFinance=async()=>{
 // منطق حسابداری از ماژول مشترک b49_accounting.js — همان کد که tests/unit/accounting.test.js می‌آزماید.
 // (نه کپی جداگانه؛ تست، توابع واقعی برنامه را می‌آزماید.)
 B49.unitBalance=(uid,fund=null)=>B49Acc.unitBalance(B49.cache,uid,fund);
+B49.unitTotalDebt=(uid)=>B49Acc.unitTotalDebt(B49.cache,uid);
 B49.fundIncome=(fund)=>B49Acc.fundIncome(B49.cache,fund);
 B49.fundExpense=(fund)=>B49Acc.fundExpense(B49.cache,fund);
 B49.fundOpening=(fund)=>B49Acc.fundOpening(B49.cache,fund);
@@ -524,7 +525,7 @@ B49.routes.dashboard=async()=>{
   const mExp=(B49.cache.expenses||[]).filter(e=>(e.jmonth||'')===cm).reduce((s,e)=>s+Number(e.amount||0),0);
   // بدهکار/تسویه
   let debtors=0,clear=0,totalDebt=0;
-  u.forEach(un=>{const b=B49.unitBalance(un.id);const t=b.bal;if(t>0){debtors++;totalDebt+=t;}else clear++;});
+  u.forEach(un=>{const t=B49.unitTotalDebt(un.id);if(t>0){debtors++;totalDebt+=t;}else clear++;});
   $('#content').innerHTML=`
   <div class="grid kpis">
     <div class="card kpi gold"><div class="ic">💵</div><div class="lbl">موجودی صندوق ماهانه</div><div class="v">${B49.rialShort(fm)}</div><div class="sub">${B49.rial(fm)}</div></div>
@@ -580,7 +581,7 @@ B49.renderDashboardCharts=()=>{
     {label:'هزینه',data:expData,backgroundColor:'rgba(229,72,77,.7)',borderRadius:6}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9AA5B5',font:{family:'Vazirmatn'}}}},scales:{x:{ticks:{color:'#9AA5B5',font:{family:'Vazirmatn'}},grid:{display:false}},y:{ticks:{color:'#9AA5B5',font:{family:'Vazirmatn'},callback:v=>B49.rialShort(v)},grid:{color:'rgba(255,255,255,.04)'}}}}}));
   // بدهی واحدها
-  const debtors=(B49.cache.units||[]).map(u=>({n:u.number,b:B49.unitBalance(u.id).bal})).filter(x=>x.b>0).sort((a,b)=>b.b-a.b).slice(0,10);
+  const debtors=(B49.cache.units||[]).map(u=>({n:u.number,b:B49.unitTotalDebt(u.id)})).filter(x=>x.b>0).sort((a,b)=>b.b-a.b).slice(0,10);
   B49._charts.push(new C($('#ch-debt'),{type:'bar',data:{labels:debtors.map(d=>B49.faDigits(d.n)),datasets:[{data:debtors.map(d=>d.b),backgroundColor:'#E5484D',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9AA5B5',font:{family:'Vazirmatn'},callback:v=>B49.rialShort(v)},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#9AA5B5',font:{family:'Vazirmatn'}},grid:{display:false}}}}}));
 };
 B49.lastMonths=(n)=>{const j=B49.jNow();let y=j.jy,m=j.jm;const out=[];for(let i=0;i<n;i++){out.unshift(y+'/'+String(m).padStart(2,'0'));m--;if(m<1){m=12;y--;}}return out;};
@@ -747,7 +748,7 @@ B49.routes['units']=async(args)=>{
   if(q){const ql=q.toLowerCase();list=units.filter(u=>String(u.number||'').includes(ql)||(owners.find(o=>o.unit_id===u.id)?.name||'').toLowerCase().includes(ql)||(tenants.find(t=>t.unit_id===u.id)?.name||'').toLowerCase().includes(ql));}
   $('#content').innerHTML=`<div class="page-head"><div><h1>واحدها و ساکنین</h1><div class="desc">اطلاعات واحد، مالک و مستاجر را در یک فرم وارد کنید</div></div><div class="acts"><button class="btn btn-gold" id="add-unit">＋ افزودن واحد</button></div></div>
     <div class="toolbar"><input class="inp" id="crud-q" placeholder="🔍 جستجو بر اساس شماره/نام..." value="${B49.escape(q)}" style="flex:1;min-width:200px;max-width:380px"></div>
-    <div class="tbl-wrap"><table><thead><tr><th>واحد</th><th>طبقه</th><th>متراژ</th><th>مالک</th><th>مستاجر</th><th>مانده</th><th></th></tr></thead><tbody>${list.length?list.map(u=>{const o=owners.find(x=>x.unit_id===u.id);const t=tenants.find(x=>x.unit_id===u.id);const b=B49.unitBalance(u.id);return `<tr><td><b style="color:var(--gold-l)">${B49.faDigits(u.number)}</b></td><td>${B49.faDigits(u.floor||'—')}</td><td class="num">${u.area?B49.faDigits(u.area)+' م²':'—'}</td><td>${B49.escape(o?.name||'—')}</td><td>${t?B49.escape(t.name):'<span style="color:var(--faint)">مالک ساکن</span>'}</td><td class="num" style="color:${b.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(b.bal)}</td><td><div class="row-actions"><button class="btn btn-sm btn-ghost" data-edit="${u.id}">✏️</button><button class="btn btn-sm btn-danger" data-del="${u.id}" title="حذف واحد">🗑️</button><a onclick="B49.go('unit/${u.id}')" style="font-size:12px;cursor:pointer">📁 پرونده</a></div></td></tr>`}).join(''):'<tr><td colspan="7" class="empty">واحدی ثبت نشده است</td></tr>'}</tbody></table></div>`;
+    <div class="tbl-wrap"><table><thead><tr><th>واحد</th><th>طبقه</th><th>متراژ</th><th>مالک</th><th>مستاجر</th><th>مانده</th><th></th></tr></thead><tbody>${list.length?list.map(u=>{const o=owners.find(x=>x.unit_id===u.id);const t=tenants.find(x=>x.unit_id===u.id);const b=B49.unitTotalDebt(u.id);return `<tr><td><b style="color:var(--gold-l)">${B49.faDigits(u.number)}</b></td><td>${B49.faDigits(u.floor||'—')}</td><td class="num">${u.area?B49.faDigits(u.area)+' م²':'—'}</td><td>${B49.escape(o?.name||'—')}</td><td>${t?B49.escape(t.name):'<span style="color:var(--faint)">مالک ساکن</span>'}</td><td class="num" style="color:${b>0?'var(--red)':'var(--green)'}">${B49.rialShort(b)}</td><td><div class="row-actions"><button class="btn btn-sm btn-ghost" data-edit="${u.id}">✏️</button><button class="btn btn-sm btn-danger" data-del="${u.id}" title="حذف واحد">🗑️</button><a onclick="B49.go('unit/${u.id}')" style="font-size:12px;cursor:pointer">📁 پرونده</a></div></td></tr>`}).join(''):'<tr><td colspan="7" class="empty">واحدی ثبت نشده است</td></tr>'}</tbody></table></div>`;
   $('#add-unit').onclick=()=>B49.unitForm(null);
   $$('#content [data-edit]').forEach(b=>b.onclick=()=>{const u=units.find(x=>x.id==b.dataset.edit);B49.unitForm(u);});
   $$('#content [data-del]').forEach(b=>b.onclick=async()=>{const u=units.find(x=>x.id==b.dataset.del);await B49.deleteUnit(u);});
@@ -1105,9 +1106,9 @@ B49.reportDefs=[
  {id:'fund-construction',icon:'🏗️',title:'صندوق عمرانی',desc:'افتتاحیه، درآمد، هزینه و موجودی صندوق عمرانی',filters:{},
   build(f){const op=B49.fundOpening('construction'),inc=B49.fundIncome('construction'),exp=B49.fundExpense('construction');return {columns:[{key:'k',label:'شرح'},{key:'v',label:'مبلغ',num:true,render:v=>B49.rial(v)}],rows:[{k:'موجودی افتتاحیه صندوق عمرانی',v:op},{k:'درآمد صندوق عمرانی',v:inc},{k:'هزینه‌ی صندوق عمرانی',v:exp},{k:'موجودی صندوق عمرانی',v:op+inc-exp}],summary:[{label:'موجودی',value:B49.rial(op+inc-exp)}]};}},
  {id:'debtors',icon:'⚠️',title:'بدهکاران',desc:'واحدهای بدهکار و مبلغ بدهی',filters:{},
-  build(f){const rows=(B49.cache.units||[]).map(u=>{const bm=B49.unitBalance(u.id,'monthly'),bc=B49.unitBalance(u.id,'construction');return {u,monthly:bm.bal,construction:bc.bal,total:bm.bal+bc.bal};}).filter(r=>r.total>0).sort((a,b)=>b.total-a.total);return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},B49.mc('monthly','بدهی ماهانه'),B49.mc('construction','بدهی عمرانی'),B49.mc('total','مجموع بدهی')],rows,summary:[{label:'تعداد بدهکار',value:B49.faDigits(rows.length)},{label:'مجموع بدهی',value:B49.rial(rows.reduce((s,r)=>s+r.total,0))}]};}},
+  build(f){const rows=(B49.cache.units||[]).map(u=>{const bm=B49.unitBalance(u.id,'monthly'),bc=B49.unitBalance(u.id,'construction');return {u,monthly:bm.bal,construction:bc.bal,total:Math.max(0,bm.bal)+Math.max(0,bc.bal)};}).filter(r=>r.total>0).sort((a,b)=>b.total-a.total);return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},B49.mc('monthly','بدهی ماهانه'),B49.mc('construction','بدهی عمرانی'),B49.mc('total','مجموع بدهی')],rows,summary:[{label:'تعداد بدهکار',value:B49.faDigits(rows.length)},{label:'مجموع بدهی',value:B49.rial(rows.reduce((s,r)=>s+r.total,0))}]};}},
  {id:'clear',icon:'✅',title:'واحدهای تسویه‌شده',desc:'واحدهای بدون بدهی',filters:{},
-  build(f){const rows=(B49.cache.units||[]).map(u=>{const b=B49.unitBalance(u.id);return {u,bal:b.bal};}).filter(r=>r.bal<=0).sort((a,b)=>B49.toEn(B49.unitOpt(a.u)).localeCompare(B49.toEn(B49.unitOpt(b.u)),'en',{numeric:true}));return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},{key:'bal',label:'مانده',num:true,render:v=>B49.rial(v)}],rows,summary:[{label:'تعداد تسویه‌شده',value:B49.faDigits(rows.length)}]};}},
+  build(f){const rows=(B49.cache.units||[]).map(u=>{return {u,bal:B49.unitTotalDebt(u.id)};}).filter(r=>r.bal<=0).sort((a,b)=>B49.toEn(B49.unitOpt(a.u)).localeCompare(B49.toEn(B49.unitOpt(b.u)),'en',{numeric:true}));return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},{key:'bal',label:'مانده',num:true,render:v=>B49.rial(v)}],rows,summary:[{label:'تعداد تسویه‌شده',value:B49.faDigits(rows.length)}]};}},
  {id:'prior',icon:'📋',title:'بدهی‌های قدیمی',desc:'مانده اولیه‌ی واحدها',filters:{},
   build(f){const rows=(B49.cache.prior||[]).map(d=>({u:d.unit_id,m:d.monthly_initial,c:d.construction_initial,cr:(Number(d.credit_monthly||0)+Number(d.credit_construction||0)),d:d.as_of_date,n:d.note})).sort((a,b)=>B49.toEn(B49.unitOpt(a.u)).localeCompare(B49.toEn(B49.unitOpt(b.u)),'en',{numeric:true}));return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},B49.mc('m','بدهی ماهانه'),B49.mc('c','بدهی عمرانی'),B49.mc('cr','طلب'),{key:'d',label:'تاریخ',render:v=>B49.gToJstr(v)},{key:'n',label:'توضیحات',render:v=>B49.escape(v||'')}],rows,summary:[{label:'مجموع بدهی ماهانه',value:B49.rial(rows.reduce((s,r)=>s+r.m,0))},{label:'مجموع بدهی عمرانی',value:B49.rial(rows.reduce((s,r)=>s+r.c,0))}]};}},
  {id:'pay-month',icon:'📅',title:'پرداخت‌های هر ماه',desc:'پرداخت‌ها به تفکیک ماه',filters:{},
@@ -1193,14 +1194,14 @@ B49.buildUnitLedgerReport=(uid)=>{
   const rows=B49.unitLedgerRows(uid);
   const bm=B49.unitBalance(uid,'monthly'),bc=B49.unitBalance(uid,'construction');
   const cols=[{key:'date',label:'تاریخ',render:v=>B49.gToJstr(v)},{key:'type',label:'نوع'},{key:'fund',label:'صندوق'},{key:'desc',label:'شرح',render:v=>B49.escape(v)},{key:'debit',label:'بدهکار',num:true,render:v=>v?B49.rial(v):'—'},{key:'credit',label:'بستانکار',num:true,render:v=>v?B49.rial(v):'—'},{key:'run',label:'مانده',num:true,render:v=>B49.rial(v)}];
-  return {columns:cols,rows,summary:[{label:'مانده ماهانه',value:B49.rial(bm.bal)},{label:'مانده عمرانی',value:B49.rial(bc.bal)},{label:'مجموع بدهی',value:B49.rial(bm.bal+bc.bal)}]};
+  return {columns:cols,rows,summary:[{label:'مانده ماهانه',value:B49.rial(bm.bal)},{label:'مانده عمرانی',value:B49.rial(bc.bal)},{label:'مجموع بدهی',value:B49.rial(Math.max(0,bm.bal)+Math.max(0,bc.bal))}]};
 };
 B49.routes['unit-files']=async()=>{
   await B49.preloadFinance();
   B49.setTitle('پرونده‌ی مالی واحد','انتخاب واحد برای مشاهده‌ی گردش حساب');
   const units=B49.cache.units||[];
   $('#content').innerHTML=`<div class="page-head"><div><h1>پرونده‌ی مالی واحد</h1><div class="desc">برای مشاهده‌ی گردش حساب کامل، واحد را انتخاب کنید</div></div></div>
-    <div class="grid kpis">${units.map(u=>{const b=B49.unitBalance(u.id);return `<div class="unit-card" onclick="B49.go('unit/${u.id}')"><div class="un">${B49.faDigits(u.number)}</div><div class="ui">طبقه ${B49.faDigits(u.floor||'—')} ${u.area?'• '+B49.faDigits(u.area)+' م²':''}</div><div class="ub"><span><div class="lbl">مانده</div><div class="val" style="color:${b.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(b.bal)}</div></span><span class="badge ${b.bal>0?'b-debt':'b-ok'}">${b.bal>0?'بدهکار':'تسویه'}</span></div></div>`}).join('')}</div>`;
+    <div class="grid kpis">${units.map(u=>{const b=B49.unitTotalDebt(u.id);return `<div class="unit-card" onclick="B49.go('unit/${u.id}')"><div class="un">${B49.faDigits(u.number)}</div><div class="ui">طبقه ${B49.faDigits(u.floor||'—')} ${u.area?'• '+B49.faDigits(u.area)+' م²':''}</div><div class="ub"><span><div class="lbl">مانده</div><div class="val" style="color:${b>0?'var(--red)':'var(--green)'}">${B49.rialShort(b)}</div></span><span class="badge ${b>0?'b-debt':'b-ok'}">${b>0?'بدهکار':'تسویه'}</span></div></div>`}).join('')}</div>`;
 };
 B49.routes.unit=async(args)=>{
   await B49.preloadFinance();
@@ -1232,7 +1233,7 @@ B49.renderUnitFile=(u,canExport=true)=>{
       <div class="stat-box"><div class="l">شارژ عمرانی تعلق‌گرفته</div><div class="v">${B49.rialShort(bc.due)}</div></div>
       <div class="stat-box"><div class="l">پرداخت عمرانی</div><div class="v" style="color:var(--green)">${B49.rialShort(bc.paid)}</div></div>
       <div class="stat-box"><div class="l">مانده عمرانی</div><div class="v" style="color:${bc.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(bc.bal)}</div></div>
-      <div class="stat-box" style="border-color:var(--border-2);background:var(--gold-soft)"><div class="l">مجموع بدهی</div><div class="v" style="color:var(--gold-l);font-size:20px">${B49.rialShort(bm.bal+bc.bal)}</div></div>
+      <div class="stat-box" style="border-color:var(--border-2);background:var(--gold-soft)"><div class="l">مجموع بدهی</div><div class="v" style="color:var(--gold-l);font-size:20px">${B49.rialShort(Math.max(0,bm.bal)+Math.max(0,bc.bal))}</div></div>
     </div>
     <div style="height:14px"></div>
     <div class="card"><h3><span class="ic">📒</span> گردش حساب (ترتیب زمانی)</h3>
@@ -1252,7 +1253,7 @@ B49.renderResidentView=async(unitId)=>{
   if(unitId){const u=my.find(x=>x.id==unitId);if(u){B49.renderUnitFile(u,true);return;}}
   if(my.length===1){B49.renderUnitFile(my[0],true);return;}
   $('#content').innerHTML=`<div class="page-head"><div><h1>واحدهای شما</h1><div class="desc">یک واحد را برای مشاهده‌ی پرونده انتخاب کنید</div></div></div>
-    <div class="grid kpis">${my.map(u=>{const b=B49.unitBalance(u.id);return `<div class="unit-card" onclick="B49.go('unit/${u.id}')"><div class="un">${B49.faDigits(u.number)}</div><div class="ui">طبقه ${B49.faDigits(u.floor||'—')}</div><div class="ub"><span><div class="lbl">مانده</div><div class="val" style="color:${b.bal>0?'var(--red)':'var(--green)'}">${B49.rialShort(b.bal)}</div></span><span class="badge ${b.bal>0?'b-debt':'b-ok'}">${b.bal>0?'بدهکار':'تسویه'}</span></div></div>`}).join('')}</div>`;
+    <div class="grid kpis">${my.map(u=>{const b=B49.unitTotalDebt(u.id);return `<div class="unit-card" onclick="B49.go('unit/${u.id}')"><div class="un">${B49.faDigits(u.number)}</div><div class="ui">طبقه ${B49.faDigits(u.floor||'—')}</div><div class="ub"><span><div class="lbl">مانده</div><div class="val" style="color:${b>0?'var(--red)':'var(--green)'}">${B49.rialShort(b)}</div></span><span class="badge ${b>0?'b-debt':'b-ok'}">${b>0?'بدهکار':'تسویه'}</span></div></div>`}).join('')}</div>`;
 };
 
 // ===================== سابقه‌ی تغییرات (audit) =====================
