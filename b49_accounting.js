@@ -18,14 +18,19 @@
 
   // ---- مانده‌ی یک واحد (بدهی + پرداخت + مانده افتتاحیه − اعتبار) ----
   // عین منطق index.html (B49.unitBalance) — فقط cache به‌جای B49.cache.
+  // مهم: cache ناقص (بدون charges/payments/prior) نباید باعث صفرشدن
+  // اطلاعات افتتاحیه یا پرداخت‌ها شود. هر آرایه به‌صورت جداگانه guard می‌شود
+  // و early-return حذف شده: حتی اگر charges خالی باشد، prior/paid محاسبه می‌شوند.
   function unitBalance(cache, uid, fund) {
     cache = cache || {};
-    if (!cache.charges) return { due: 0, paid: 0, prior: 0, credit: 0, bal: 0 };
-    const cf = c => c.unit_id === uid && ((fund ? ((c.type || 'monthly') === fund) : true));
-    const pf = p => p.unit_id === uid && ((fund ? ((p.type || 'monthly') === fund) : true));
-    const due = (cache.charges.filter(cf)).reduce((s, c) => s + Number(c.amount_due || 0), 0);
-    const paid = (cache.payments.filter(pf)).reduce((s, p) => s + Number(p.amount || 0), 0);
-    const pd = (cache.prior || []).filter(d => d.unit_id === uid);
+    const charges = cache.charges || [];
+    const payments = cache.payments || [];
+    const priorArr = cache.prior || [];
+    const cf = c => c.unit_id === uid && (fund ? ((c.type || 'monthly') === fund) : true);
+    const pf = p => p.unit_id === uid && (fund ? ((p.type || 'monthly') === fund) : true);
+    const due = charges.filter(cf).reduce((s, c) => s + Number(c.amount_due || 0), 0);
+    const paid = payments.filter(pf).reduce((s, p) => s + Number(p.amount || 0), 0);
+    const pd = priorArr.filter(d => d.unit_id === uid);
     const prior = pd.reduce((s, d) => {
       if (fund === 'monthly') return s + Number(d.monthly_initial || 0);
       if (fund === 'construction') return s + Number(d.construction_initial || 0);

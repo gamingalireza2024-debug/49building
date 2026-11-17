@@ -2,310 +2,170 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تست خودکار ساختمان ۴۹</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تست E2E امن — ساختمان ۴۹ (فقط محیط آزمایشی)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{
-    --bg:#0b1220; --panel:#121a2e; --panel2:#0f1626; --gold:#d4af37; --gold-dim:#8a7228;
-    --navy:#1b2a4a; --ok:#22c55e; --err:#ef4444; --warn:#f59e0b; --faint:#7d8aa3; --txt:#e8ecf3;
-    --font:'Vazirmatn','Segoe UI',Tahoma,sans-serif;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(160deg,#0b1220,#0f1626 60%,#0b1220);color:var(--txt);
-       font-family:var(--font);font-size:15px;line-height:1.7;min-height:100vh;padding:18px}
-  .wrap{max-width:980px;margin:0 auto}
-  header{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--panel);
-         border:1px solid var(--navy);border-radius:14px;margin-bottom:16px}
-  header .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--gold),var(--gold-dim));
-               display:flex;align-items:center;justify-content:center;color:#0b1220;font-weight:800;font-size:20px}
-  header h1{margin:0;font-size:20px;color:var(--gold)}
-  header .sub{color:var(--faint);font-size:12px}
-  .card{background:var(--panel);border:1px solid var(--navy);border-radius:14px;padding:18px;margin-bottom:16px}
-  .card h2{margin:0 0 12px;font-size:16px;color:var(--gold);border-bottom:1px solid var(--navy);padding-bottom:8px}
-  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
-  .f{display:flex;flex-direction:column;gap:5px}
-  .f label{font-size:12px;color:var(--faint)}
-  input[type=text],input[type=password]{background:var(--panel2);border:1px solid var(--navy);color:var(--txt);
-    padding:9px 12px;border-radius:8px;font-family:var(--font);font-size:14px;min-width:220px}
-  input:focus{outline:none;border-color:var(--gold)}
-  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint)}
-  button{font-family:var(--font);cursor:pointer;border:none;border-radius:9px;padding:11px 22px;font-size:15px;font-weight:700}
-  .btn-run{background:linear-gradient(135deg,var(--gold),var(--gold-dim));color:#0b1220}
-  .btn-run:disabled{opacity:.5;cursor:not-allowed}
-  .btn-copy{background:var(--navy);color:var(--gold)}
-  .btn-stop{background:#3a1212;color:#fff}
-  .hint{color:var(--faint);font-size:12px;margin-top:10px}
-  .hint b{color:var(--txt)}
-  #out{background:#070b14;border:1px solid var(--navy);border-radius:10px;padding:12px 14px;
-       max-height:560px;overflow-y:auto;font-family:'Consolas','Vazirmatn',monospace;font-size:13px;white-space:pre-wrap}
-  .L{padding:2px 0;border-bottom:1px solid rgba(123,138,163,.08)}
-  .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)} .fnt{color:var(--faint)} .hd{color:var(--gold);font-weight:700;margin-top:8px}
-  .summary{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
-  .stat{background:var(--panel2);border:1px solid var(--navy);border-radius:10px;padding:10px 16px;text-align:center}
-  .stat b{display:block;font-size:24px;color:var(--gold)}
-  .stat span{font-size:11px;color:var(--faint)}
-  .progress{height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:10px 0}
-  .progress > div{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-dim));width:0;transition:width .3s}
+*{box-sizing:border-box;font-family:Vazirmatn,Tahoma,sans-serif}
+body{background:#0B1220;color:#E6E8EC;padding:20px;max-width:920px;margin:0 auto}
+h1{color:#F5D67B;font-size:20px}h2{color:#6CB6FF;font-size:15px;margin:14px 0 6px}
+.inp{background:#111A2E;border:1px solid #2A3650;color:#E6E8EC;border-radius:8px;padding:9px;width:100%;margin:4px 0}
+.btn{background:#1B6EC2;color:#fff;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;margin:6px 4px 0}
+.btn.gold{background:#C9A227;color:#0B1220}.btn:disabled{opacity:.5}
+.warn{background:#3A1B1B;border-right:3px solid #FF6B6B;padding:10px;border-radius:6px;color:#FFB3B3;margin:8px 0;font-size:13px}
+.ok{background:#1B2C2A;border-right:3px solid #52D88B;padding:10px;border-radius:6px;color:#A6E7C4;margin:8px 0;font-size:13px}
+.err{color:#FF6B6B}
+pre{background:#0A0F1C;border:1px solid #1F2A40;border-radius:8px;padding:12px;overflow:auto;max-height:380px;font-size:12px;white-space:pre-wrap;direction:ltr;text-align:left}
+.row{display:flex;gap:8px}
+.pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;background:#1B2C4A;color:#6CB6FF;margin:2px}
+.blocked{display:none;background:#3A1B1B;border:2px solid #FF6B6B;border-radius:10px;padding:14px;color:#FFB3B3;margin:10px 0}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="logo">۴۹</div>
-    <div>
-      <h1>تست خودکار سیستم حسابداری ساختمان ۴۹</h1>
-      <div class="sub">ثبت‌نام / ورود / خروج + ماتریس کامل CRUD همه‌ی جداول — مستقیم روی دیتابیس شما</div>
-    </div>
-  </header>
+<h1>🛡 تست E2E امن — ساختمان ۴۹</h1>
+<div class="ok">✅ این صفحه <b>فقط</b> به محیط Local (<code>localhost</code>/<code>127.0.0.1</code>) متصل می‌شود.
+قبل از هر تست، آدرس دیتابیس بررسی می‌شود؛ اگر غیرمحلی (به‌ویژه Production یا هر دامنه‌ی <code>supabase.co</code>) باشد، اجرا <b>فوراً متوقف</b> می‌شود و هیچ درخواستی ارسال نمی‌شود.</div>
 
-  <div class="card">
-    <h2>۱) تنظیمات اجرا</h2>
-    <div class="row">
-      <div class="f">
-        <label>ایمیل ادمین (برای فاز D — اختیاری)</label>
-        <input type="text" id="admin_email" placeholder="admin@example.com" dir="ltr">
-      </div>
-      <div class="f">
-        <label>رمز ادمین</label>
-        <input type="password" id="admin_pass" placeholder="رمز عبور ادمین" dir="ltr">
-      </div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <label class="chk"><input type="checkbox" id="do_signup" checked> اجرای فاز ثبت‌نام (ساخت یوزر تست)</label>
-      <label class="chk"><input type="checkbox" id="do_admin" checked> اجرای فاز ادمین (اگر رمز بالا را زدید)</label>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button class="btn-run" id="run">▶ اجرای تست کامل</button>
-      <button class="btn-stop" id="stop" style="display:none">توقف</button>
-    </div>
-    <div class="hint">
-      <b>چطور اجرا کنید:</b> این فایل را با مرورگر باز کنید (دابل‌کلیک). اگر با فایل بازکردن کار نکرد (خطای CORS)،
-      آن را کنار <code>index.html</code> اپ بگذارید و همان‌طور که اپ را باز می‌کنید این را هم باز کنید.
-      <br><b>یوزر تست:</b> یک کاربر <code>b49_e2e_test_...@example.com</code> در Supabase Auth ساخته می‌شود؛
-      بعداً از Dashboard → Authentication → Users حذفش کنید.
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>۲) نتیجه‌ی زنده</h2>
-    <div class="progress"><div id="bar"></div></div>
-    <div class="summary">
-      <div class="stat"><b id="s-ok">۰</b><span>موفق</span></div>
-      <div class="stat"><b id="s-fail">۰</b><span>ناموفق</span></div>
-      <div class="stat"><b id="s-bug">۰</b><span>باگ پیدا شده</span></div>
-    </div>
-    <div id="out"></div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn-copy" id="copy">📋 کپی گزارش (برای ارسال به من)</button>
-    </div>
-  </div>
+<h2>پیکربندی اتصال آزمایشی</h2>
+<div class="row">
+  <input class="inp" id="url" placeholder="http://localhost:54321" value="http://localhost:54321">
+  <input class="inp" id="key" placeholder="anon key محلی/staging" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5NDMzNDM5OTYsImlhdCI6MTY0MTc5MDIwMH0.JbdEHHtJi7O4sHCyI5c3GFLpBydk-fXH65Rf9F--xZ4">
 </div>
+<div class="row">
+  <input class="inp" id="admin-email" placeholder="ایمیل ادمین آزمایشی" value="test_admin@example.com">
+  <input class="inp" id="admin-pass" placeholder="رمز ادمین آزمایشی" value="TestPass123!">
+</div>
+<div style="margin-top:10px">
+  <button class="btn gold" id="run">▶ اجرای تست امن</button>
+  <span class="pill" id="state">آماده</span>
+</div>
+<div class="blocked" id="block-banner">🚫 متوقف شد: آدرس غیرمحلی تشخیص داده شد. فقط localhost / 127.0.0.1 مجاز است (هیچ دامنه‌ی supabase.co یا staging). هیچ درخواستی ارسال نشد.</div>
+
+<h2>گزارش</h2>
+<pre id="log">خروجی اینجا نمایش داده می‌شود.</pre>
 
 <script>
-const URL='https://axfjnhllvzesydwpmndw.supabase.co';
-const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4ZmpuaGxsdnplc3lkd3BtbmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2Mzg1MjEsImV4cCI6MjExMDIxNDUyMX0.YHHr54dnDovnGyPvtM_ZHltCH-yEOM7seVvXqUFXwGk';
-let sb=supabase.createClient(URL,KEY);
-const fa=n=>n.toLocaleString('fa-IR');
-const TS=new Date().toISOString().slice(0,19).replace(/[:T]/g,'');
-const MARK='__E2E_'+TS+'__';
-let report=[], okCount=0, failCount=0, bugCount=0, stopped=false;
-const out=document.getElementById('out'), bar=document.getElementById('bar');
-let totalSteps=0, doneSteps=0;
+let sb=null,logEl=document.getElementById('log'),stateEl=document.getElementById('state'),banner=document.getElementById('block-banner');
+let created={units:[],payments:[],expenses:[],charges:[],prior:[],resident:[]};
+const TS=Date.now();
+function log(m){const s=(typeof m==='string'?m:JSON.stringify(m,null,2));logEl.textContent+=(logEl.textContent.endsWith('.')||logEl.textContent==='خروجی اینجا نمایش داده می‌شود.'?'':'\n')+s;console.log(m);}
+function setState(s,cls){stateEl.textContent=s;stateEl.className='pill '+(cls||'');}
 
-function add(text,cls='fnt'){
-  const d=document.createElement('div'); d.className='L '+cls; d.textContent=text;
-  out.appendChild(d); out.scrollTop=out.scrollHeight;
-  report.push(text);
+// ====== گارد امنیت: فقط محیط محلی ======
+// مجاز: فقط localhost یا 127.0.0.1 (هر پورت).
+// مسدود: هر چیز دیگر — به‌ویژه هر دامنه‌ی *.supabase.co (Production) و staging.
+// قبل از ساخت کلاینت Supabase بررسی می‌شود؛ اگر ناامن باشد، اجرا فوراً متوقف می‌شود.
+function isSafeUrl(url){
+  if(!url)return false;
+  let u;
+  try{u=new URL(url);}catch(e){return false;}
+  const h=(u.hostname||'').toLowerCase();
+  // فقط محیط محلی مجاز است: localhost یا 127.0.0.1 (هر پورت).
+  // هر دامنه‌ی دیگر — به‌ویژه *.supabase.co (Production) و staging — مسدود می‌شود.
+  if(h==='localhost'||h==='127.0.0.1')return true;
+  return false;
 }
-function hd(t){add('\n'+'═'.repeat(60),'hd');add(t,'hd');add('═'.repeat(60),'hd');}
-function res(ok,label,detail){
-  const cls=ok?'ok':'err'; add((ok?'✓ ':'✗ ')+label+' — '+detail,cls);
-  if(ok)okCount++;else failCount++;
-  document.getElementById('s-ok').textContent=fa(okCount);
-  document.getElementById('s-fail').textContent=fa(failCount);
-}
-function bug(label,detail){add('🐛 باگ: '+label+' — '+detail,'warn');bugCount++;document.getElementById('s-bug').textContent=fa(bugCount);}
-function setProgress(p){bar.style.width=Math.round(p*100)+'%';}
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function rnd(){return Math.random().toString(36).slice(2,10);}
 
-// ---------- اجرا ----------
-document.getElementById('run').onclick=run;
-document.getElementById('stop').onclick=()=>{stopped=true;};
-document.getElementById('copy').onclick=()=>{
-  const t=report.join('\n');
-  navigator.clipboard.writeText(t).then(()=>alert('گزارش کپی شد! آن را برای من بفرستید.')).catch(()=>{
-    const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();
-    document.execCommand('copy');document.body.removeChild(ta);alert('گزارش کپی شد!');
-  });
-};
-
-async function run(){
-  out.innerHTML='';report=[];okCount=failCount=bugCount=0;stopped=false;
-  ['s-ok','s-fail','s-bug'].forEach(id=>document.getElementById(id).textContent='۰');
-  document.getElementById('run').disabled=true;document.getElementById('stop').style.display='';
-  const adminEmail=document.getElementById('admin_email').value.trim();
-  const adminPass=document.getElementById('admin_pass').value;
-  const doSignup=document.getElementById('do_signup').checked;
-  const doAdmin=document.getElementById('do_admin').checked && adminEmail && adminPass;
-
-  totalSteps=2+(doSignup?3:0)+(doAdmin?13:0);doneSteps=0;
-
+async function cleanup(){
+  log('\n— پاک‌سازی داده‌های آزمایشی —');
   try{
-    // ===== فاز A =====
-    hd('فاز A: موجودیت جداول (بدون login)');
-    const TABLES=['units','owners','tenants','expenses','charges','payments','prior_debts',
-      'expense_categories','construction_projects','building_settings','profiles','resident_units','audit_log'];
-    for(const t of TABLES){
-      if(stopped)break;
-      let r=await sb.from(t).select('*').limit(1);
-      if(!r.error)res(true,t,'جدول موجود');
-      else if(r.error.message.includes('column'))res(true,t+' (بدون ستون id)','جدول موجود ولی...');
-      else res(false,t,r.error.message.slice(0,80));
-      doneSteps++;setProgress(doneSteps/totalSteps);
-    }
-    add('\nستون‌های کلیدی expenses:','fnt');
-    for(const c of ['fund','project_id','receipt_url','reference_no']){
-      let r=await sb.from('expenses').select(c).limit(1);
-      add('  expenses.'+c+': '+(r.error?'✗ ناموجود':'✓ موجود'),r.error?'err':'ok');
-    }
-    doneSteps++;setProgress(doneSteps/totalSteps);
-
-    // ===== فاز B: ثبت‌نام =====
-    if(doSignup && !stopped){
-      hd('فاز B: ثبت‌نام یوزر تست → آیا پروفایل ساخته می‌شود؟');
-      const email='b49_e2e_test_'+TS+'@example.com';
-      const pass='Test1234!'+rnd();
-      add('ایمیل تست: '+email,'fnt');
-      let r=await sb.auth.signUp({email,password:pass});
-      if(r.error){
-        if(r.error.message.includes('rate')){add('⚠ rate limit (429) — یک دقیقه صبر کنید و دوباره.','warn');}
-        else res(false,'ثبت‌نام',r.error.message.slice(0,120));
-      }else{
-        const uid=r.data.user&&r.data.user.id;
-        const hasSession=r.data.session;
-        add('user.id = '+uid,'fnt');
-        add('access_token = '+(hasSession?'دارد (سشن فعال)':'ندارد → احتمالاً تأیید ایمیل روشن است'),'fnt');
-        if(hasSession&&uid){
-          await sleep(1500);
-          let p=await sb.from('profiles').select('*').eq('id',uid);
-          const rows=p.data||[];
-          if(rows.length){
-            res(true,'ساخت پروفایل هنگام ثبت‌نام','trigger کار می‌کند — role='+rows[0].role);
-          }else{
-            res(false,'ساخت پروفایل هنگام ثبت‌نام','پروفایل ساخته نشد');
-            bug('یوزر جدید نشان داده نمی‌شود','trigger on_auth_user_created اعمال نشده → schema.sql خط ۲۴۶-۲۵۹ را اجرا کنید');
-          }
-        }else if(!hasSession){
-          let s=await sb.auth.signInWithPassword({email,password:pass});
-          if(s.error&&s.error.message.toLowerCase().includes('not confirmed')){
-            bug('یوزر جدید وارد نمی‌شود','«Confirm email» در Supabase روشن است → Authentication → Providers → Email → خاموش کنید');
-          }else add('تلاش ورود: '+(s.error?s.error.message.slice(0,100):'موفق'),'fnt');
-        }
-      }
-      // فاز C: به‌عنوان یوزر تازه (اگر سشن هست)
-      if(!stopped && r.data && r.data.session){
-        hd('فاز C: نوشتن به‌عنوان یوزر غیرادمین (انتظار: RLS بلاک کند)');
-        let w=await sb.from('units').insert({number:MARK,floor:1}).select();
-        if(w.error)res(true,'insert units (RLS بلاک کرد)',w.error.message.slice(0,80));
-        else{res(false,'insert units','نوشته شد ولی RLS نباید اجازه دهد!');bug('RLS روی units برای non-admin باز است','policy بررسی شود');}
-      }
-      doneSteps+=doSignup?3:0;setProgress(doneSteps/totalSteps);
-    }
-
-    // ===== فاز D: ادمین =====
-    if(doAdmin && !stopped){
-      hd('فاز D: ماتریس کامل CRUD به‌عنوان ادمین');
-      let l=await sb.auth.signInWithPassword({email:adminEmail,password:adminPass});
-      if(l.error||!l.data.session){res(false,'ورود ادمین',(l.error?l.error.message:'سشن نشد').slice(0,120));}
-      else{
-        res(true,'ورود ادمین','موفق');
-        const auid=l.data.user.id;
-        const created=[];
-        const cleanup=async()=>{
-          add('\n— پاکسازی داده‌ی تست —','fnt');
-          for(const [t,id] of created.reverse()){if(id==null)continue;let d=await sb.from(t).delete().eq('id',id);add('  delete '+t+'/'+id+': '+(d.error?'✗ '+d.error.message.slice(0,60):'✓'),'fnt');}
-          await sb.auth.signOut();add('✓ خروج (signOut) ادمین','ok');
-        };
-
-        // ۱) واحد
-        let u=await sb.from('units').insert({number:MARK,floor:2,area:100}).select();
-        const uid=u.data&&u.data[0]&&u.data[0].id; if(uid)created.push(['units',uid]);
-        res(!u.error&&uid,'insert unit (واحد)',(u.error?u.error.message:'id='+uid).slice(0,80));
-
-        // ۲) مالک
-        if(uid){let o=await sb.from('owners').insert({unit_id:uid,name:'مالک '+MARK,phone:'09120000000'}).select();
-          const oid=o.data&&o.data[0]&&o.data[0].id;if(oid)created.push(['owners',oid]);
-          res(!o.error&&oid,'insert owner (مالک)',(o.error?o.error.message:'id='+oid).slice(0,80));}
-
-        // ۳) مستاجر
-        if(uid){let t=await sb.from('tenants').insert({unit_id:uid,name:'مستاجر '+MARK,lease_start:'2025-01-01',lease_end:'2026-01-01'}).select();
-          const tid=t.data&&t.data[0]&&t.data[0].id;if(tid)created.push(['tenants',tid]);
-          res(!t.error&&tid,'insert tenant (مستاجر)',(t.error?t.error.message:'id='+tid).slice(0,80));}
-
-        // ۴) دسته
-        let c=await sb.from('expense_categories').insert({name:'دسته '+MARK,type:'monthly'}).select();
-        const cid=c.data&&c.data[0]&&c.data[0].id;if(cid)created.push(['expense_categories',cid]);
-        res(!c.error&&cid,'insert category (دسته)',(c.error?c.error.message:'id='+cid).slice(0,80));
-
-        // ۵) پروژه
-        let pr=await sb.from('construction_projects').insert({name:'پروژه '+MARK,status:'open',budget_approved:10000000,start_date:'2025-01-01'}).select();
-        const pid=pr.data&&pr.data[0]&&pr.data[0].id;if(pid)created.push(['construction_projects',pid]);
-        res(!pr.error&&pid,'insert project (پروژه)',(pr.error?pr.error.message:'id='+pid).slice(0,80));
-
-        // ۶) هزینه — حالت باگ (project_id='')
-        let e1=await sb.from('expenses').insert({title:'هزینه '+MARK,amount:500000,expense_date:'2025-01-15',jmonth:'1403/11',fund:'monthly',category_id:cid,payment_type:'cash',reference_no:'',project_id:'',description:'تست',created_by:auid}).select();
-        if(e1.error){res(true,'insert expense با project_id="" (باگ قدیم)',e1.error.message.slice(0,80));}
-        else res(false,'insert expense با project_id=""','نوشته شد! (این نباید با رشته‌ی خالی بشود — بررسی)');
-
-        // ۶ب) هزینه — حالت اصلاح (project_id=null)
-        let e2=await sb.from('expenses').insert({title:'هزینه '+MARK,amount:500000,expense_date:'2025-01-15',jmonth:'1403/11',fund:'monthly',category_id:cid,payment_type:'cash',reference_no:null,project_id:null,description:'تست',created_by:auid}).select();
-        const eid=e2.data&&e2.data[0]&&e2.data[0].id;if(eid)created.push(['expenses',eid]);
-        res(!e2.error&&eid,'insert expense با project_id=null (اصلاح)',(e2.error?e2.error.message:'id='+eid).slice(0,80));
-
-        // ۷) شارژ
-        if(uid){let ch=await sb.from('charges').insert({unit_id:uid,jmonth:'1403/11',amount_due:200000,type:'monthly',created_by:auid}).select();
-          const chid=ch.data&&ch.data[0]&&ch.data[0].id;if(chid)created.push(['charges',chid]);
-          res(!ch.error&&chid,'insert charge (شارژ ماهانه)',(ch.error?ch.error.message:'id='+chid).slice(0,80));}
-
-        // ۸) پرداخت
-        if(uid){let p=await sb.from('payments').insert({unit_id:uid,amount:200000,type:'monthly',jmonth:'1403/11',payment_date:'2025-01-20',method:'card',note:'تست',created_by:auid}).select();
-          const pyid=p.data&&p.data[0]&&p.data[0].id;if(pyid)created.push(['payments',pyid]);
-          res(!p.error&&pyid,'insert payment (پرداخت)',(p.error?p.error.message:'id='+pyid).slice(0,80));}
-
-        // ۹) بدهی اولیه
-        if(uid){let pd=await sb.from('prior_debts').insert({unit_id:uid,amount:100000,note:'تست',created_by:auid}).select();
-          const pdid=pd.data&&pd.data[0]&&pd.data[0].id;if(pdid)created.push(['prior_debts',pdid]);
-          res(!pd.error&&pdid,'insert prior_debt (بدهی اولیه)',(pd.error?pd.error.message:'id='+pdid).slice(0,80));}
-
-        // ۱۰) تنظیمات (upsert)
-        let s=await sb.from('building_settings').upsert({id:1,building_name:'ساختمان تست '+MARK,admin_phone:'09120000000'}).select();
-        res(!s.error,'upsert settings (تنظیمات)',(s.error?s.error.message:'ok').slice(0,80));
-
-        // ۱۱) select تأیید
-        let sel=await sb.from('expenses').select('id,title').ilike('title','%'+MARK+'%');
-        res(!sel.error&&(sel.data||[]).length>=1,'select expenses (تأیید ذخیره)','count='+((sel.data||[]).length));
-
-        // ۱۲) update واحد
-        if(uid){let uu=await sb.from('units').update({floor:3}).eq('id',uid).select();
-          res(!uu.error,'update unit (ویرایش)',(uu.error?uu.error.message:'ok').slice(0,70));}
-
-        await cleanup();
-      }
-      doneSteps+=13;setProgress(doneSteps/totalSteps);
-    }
-
-    hd('خلاصه');
-    add('موفق: '+okCount+' | ناموفق: '+failCount+' | باگ: '+bugCount,'hd');
-    add('گزارش کامل را با دکمه‌ی «کپی گزارش» بگیرید و برای من بفرستید.','fnt');
-  }catch(e){
-    add('خطای غیرمنتظره: '+(e.message||e),'err');
-  }finally{
-    document.getElementById('run').disabled=false;document.getElementById('stop').style.display='none';
-    setProgress(1);
-  }
+    for(const id of created.payments){try{await sb.from('payments').delete().eq('id',id);}catch(e){}}
+    for(const id of created.expenses){try{await sb.from('expenses').delete().eq('id',id);}catch(e){}}
+    for(const id of created.charges){try{await sb.from('charges').delete().eq('id',id);}catch(e){}}
+    for(const id of created.prior){try{await sb.from('prior_debts').delete().eq('id',id);}catch(e){}}
+    for(const id of created.resident){try{await sb.from('resident_units').delete().eq('unit_id',id[0]).eq('user_id',id[1]);}catch(e){}}
+    for(const id of created.units){try{await sb.from('units').delete().eq('id',id);}catch(e){}}
+    log('پاک‌سازی انجام شد.');
+  }catch(e){log('خطا در پاک‌سازی: '+e.message);}
 }
+
+let pass=0,fail=0;
+function check(name,ok){log((ok?'✓ ':'✗ ')+name);ok?pass++:fail++;}
+
+document.getElementById('run').onclick=async()=>{
+  const url=document.getElementById('url').value.trim();
+  const key=document.getElementById('key').value.trim();
+  logEl.textContent='';
+  pass=0;fail=0;
+  banner.style.display='none';
+
+  // ۱) گارد امنیت — قبل از هر اتصال
+  if(!isSafeUrl(url)){
+    log('🚫 متوقف: آدرس واردشده غیرمحلی است.');
+    log('   فقط localhost / 127.0.0.1 مجاز است (هیچ دامنه‌ی supabase.co یا staging).');
+    log('   هیچ کلاینت Supabase ساخته نشد و هیچ درخواستی ارسال نشد.');
+    banner.style.display='block';
+    setState('متوقف — Production','err');
+    return; // توقف قطعی
+  }
+  check('گارد امنیت — آدرس محلی/staging است',true);
+  setState('در حال اجرا…');
+
+  // فقط بعد از تأیید گارد، کلاینت ساخته می‌شود
+  sb=window.supabase.createClient(url,key);
+  try{
+    const {data:login,error:le}=await sb.auth.signInWithPassword({email:document.getElementById('admin-email').value,password:document.getElementById('admin-pass').value});
+    check('ورود ادمین آزمایشی',!le&&!!login.session);
+    if(le){log('ورود ناموفق: '+le.message);setState('پایان','err');return;}
+
+    // RPC اتمیک: ایجاد واحد آزمایشی
+    const num='T'+TS;
+    const {data:rpc,error:re}=await sb.rpc('save_unit_owner_tenant',{
+      p_unit:{number:num,floor:9,area:90},
+      p_owner:{name:'مالک تست '+TS},
+      p_tenant:{name:'مستاجر تست '+TS,phone:'09990000000'},
+      p_tenant_remove:false
+    });
+    const uid=rpc&&rpc[0]&&rpc[0].unit_id;
+    check('RPC save_unit_owner_tenant اتمیک موفق',!re&&!!uid);
+    if(uid)created.units.push(uid);
+    if(re)log('RPC خطا: '+re.message);
+
+    // update_expense اتمیک: ثبت سپس ویرایش (بدون delete-then-insert)
+    const {data:eid,error:ee}=await sb.rpc('record_expense',{p_title:'هزینه تست '+TS,p_amount:100000,p_fund:'monthly',p_reason:'تست e2e'});
+    if(eid){
+      created.expenses.push(eid);
+      const {error:ue}=await sb.rpc('update_expense',{p_id:eid,p_title:'هزینه ویرایش '+TS,p_amount:200000,p_fund:'monthly',p_reason:'ویرایش e2e'});
+      check('RPC update_expense اتمیک موفق',!ue);
+      const {data:erow}=await sb.from('expenses').select('amount').eq('id',eid).maybeSingle();
+      check('update_expense: مبلغ واقعاً تغییر کرد (همان id)',erow&&erow.amount===200000);
+      const {error:de}=await sb.rpc('delete_expense',{p_id:eid,p_reason:'حذف e2e'});
+      check('RPC delete_expense اتمیک موفق',!de);
+    }else{check('RPC record_expense برای ویرایش',false);log('خطا ثبت هزینه: '+(ee&&ee.message));}
+
+    // update_payment اتمیک: ثبت سپس ویرایش
+    const {data:pid,error:pe}=await sb.rpc('record_payment',{p_unit_id:uid,p_amount:500000,p_type:'monthly',p_jmonth:'1403/08',p_payment_date:'2024-10-05',p_method:'bank',p_reason:'تست e2e'});
+    if(pid){
+      created.payments.push(pid);
+      const {error:up}=await sb.rpc('update_payment',{p_id:pid,p_unit_id:uid,p_amount:700000,p_type:'monthly',p_jmonth:'1403/08',p_payment_date:'2024-10-05',p_method:'bank',p_reason:'ویرایش e2e'});
+      check('RPC update_payment اتمیک موفق',!up);
+      const {data:prow}=await sb.from('payments').select('amount').eq('id',pid).maybeSingle();
+      check('update_payment: مبلغ واقعاً تغییر کرد (همان id)',prow&&prow.amount===700000);
+      const {error:dp}=await sb.rpc('delete_payment',{p_id:pid,p_reason:'حذف e2e'});
+      check('RPC delete_payment اتمیک موفق',!dp);
+    }else{check('RPC record_payment برای ویرایش',false);log('خطا ثبت پرداخت: '+(pe&&pe.message));}
+
+    // اعتبارسنجی: مبلغ صفر رد می‌شود
+    const {error:pe0}=await sb.rpc('record_payment',{p_unit_id:uid,p_amount:0,p_type:'monthly',p_jmonth:'1403/08',p_payment_date:'2024-10-05',p_method:'bank'});
+    check('record_payment: مبلغ صفر رد می‌شود',!!pe0);
+
+    // جلوگیری از ارتقای نقش (trigger)
+    const me=login.session.user;
+    const {error:roleErr}=await sb.from('profiles').update({role:'admin'}).eq('id',me.id);
+    check('جلوگیری از ارتقای نقش ساکن به مدیر (trigger)',roleErr&&/نقش|role|policy/i.test(roleErr.message));
+
+    // جلوگیری از audit با actor جعلی (RLS)
+    const {error:auditErr}=await sb.from('audit_log').insert({table_name:'payments',record_id:1,action:'insert',actor:'11111111-1111-1111-1111-111111111111'});
+    check('جلوگیری از درج مستقیم audit_log از مرورگر (فقط از طریق RPC record_audit)',!!auditErr);
+
+    log('\n══ نتیجه: '+pass+' موفق / '+fail+' ناموفق ══');
+    setState(fail?'ناموفق':'موفق',fail?'err':'ok');
+  }catch(e){log('استثنا: '+e.message);setState('خطا','err');}
+  finally{
+    await cleanup();
+    await sb?.auth?.signOut?.().catch(()=>{});
+  }
+};
 </script>
 </body>
 </html>

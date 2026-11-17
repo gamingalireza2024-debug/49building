@@ -617,11 +617,18 @@ B49.openReceipt=async(key)=>{
 document.addEventListener('click',e=>{const a=e.target.closest('[data-receipt-path]');if(a){e.preventDefault();B49.openReceipt(a.dataset.receiptPath);}});
 
 // ===================== سابقه‌ی تغییرات (audit) =====================
-// خطاهای audit گزارش می‌شوند (ولی برای عملیات مالی، audit داخل RPC اتمیک است).
+// audit_log دیگر مستقیم از مرورگر درج نمی‌شود (RLS insert policy حذف شد).
+// ثبت سابقه فقط از طریق RPC اتمیک record_audit انجام می‌شود که actor را
+// سمت سرور برابر auth.uid() تضمین می‌کند و فقط مدیر مجاز است.
+// عملیات مالی (پرداخت/هزینه/شارژ/مانده/واحد) audit خود را داخل RPC اتمیک
+// مربوطه ثبت می‌کنند و از این مسیر عبور نمی‌کنند.
 B49.audit=async(table,row,action,reason='')=>{
   if(!B49.user)return;
   try{
-    const {error}=await B49.sb.from('audit_log').insert({table_name:table,record_id:row.id,action,reason,change_data:row,actor:B49.user.id});
+    const rid=Number(row&&row.id)||0;
+    const {error}=await B49.sb.rpc('record_audit',{
+      p_table:table,p_record_id:rid,p_action:action,p_reason:reason||'',p_change_data:row
+    });
     if(error){console.error('[B49.audit] خطا در ثبت سابقه:',table,action,error);B49.toast('هشدار: ثبت سابقه‌ی تغییر ناموفق بود ('+B49.faMsg(error.message)+')','warn');}
   }catch(e){console.error('[B49.audit] استثنا:',e);B49.toast('هشدار: ثبت سابقه‌ی تغییر با خطا مواجه شد','warn');}
 };
