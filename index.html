@@ -17,7 +17,7 @@
 :root{
   --bg:#0B1220; --bg2:#0D1526; --panel:#111B2E; --panel2:#16213A; --panel3:#1C2944;
   --border:rgba(212,169,65,.16); --border-2:rgba(212,169,65,.28); --line:rgba(255,255,255,.06);
-  --text:#F2F4F8; --muted:#9AA5B5; --faint:#6B7689;
+  --text:#F2F4F8; --muted:#9AA5B5; --faint:#8B96A8;
   --gold:#D4A941; --gold-l:#E0B94F; --gold-xl:#F5D67B; --gold-d:#B08A2E;
   --gold-soft:rgba(212,169,65,.12); --gold-glow:0 0 40px rgba(212,169,65,.10);
   --navy-on-gold:#1A1405;
@@ -228,11 +228,27 @@ td.num,th.num{text-align:left;font-variant-numeric:tabular-nums;direction:ltr}
 }
 .menu-toggle{display:none;background:transparent;border:none;color:var(--gold);font-size:22px;cursor:pointer}
 @media(max-width:860px){.menu-toggle{display:block}}
+/* فیکس دسترس‌پذیری/کنتراست/واکنش‌گرایی — فاز نهایی */
+:focus-visible{outline:2px solid var(--gold-l);outline-offset:2px;border-radius:6px}
+button:focus-visible,a:focus-visible,.inp:focus-visible{outline:2px solid var(--gold-l);outline-offset:2px}
+.inp:focus{outline:none}
+/* جداول در موبایل: شکستن سطرها به‌جای اسکرول افقی طولانی */
+@media(max-width:860px){
+  th,td{white-space:normal;padding:8px 10px}
+  table{font-size:12.5px}
+  .modal{max-height:calc(100vh - 32px);overflow-y:auto}
+  .modal-bg{padding:12px 8px}
+}
+/* احترام به ترجیح کاهش انیمیشن کاربر */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div class="toasts" id="toasts"></div>
+<div class="toasts" id="toasts" role="region" aria-live="polite" aria-label="اعلان‌ها"></div>
 <script>
 /* =====================================================================
    ساختمان ۴۹ — سامانه مدیریت مالی (تک‌فایل، v2)
@@ -390,7 +406,27 @@ B49.loadProfile=async(u)=>{
       B49.profile={id:u.id,role:'member',full_name:u.email};
       B49.toast('پروفایل شما یافت نشد (trigger on_auth_user_created احتمالاً اعمال نشده). به‌عنوان ساکن وارد شدید — با مدیر تماس بگیرید.','warn');
     }
+    // bootstrap: اگر کاربر عضو است و هنوز هیچ مدیری وجود ندارد، پیشنهاد دریافت دسترسی.
+    // RPC admin_exists ممکن است هنوز نصب نشده باشد → خطا بی‌صدا نادیده گرفته می‌شود.
+    if(!B49.isAdmin()){
+      try{const {data:ex}=await B49.sb.rpc('admin_exists'); if(ex===false){B49.offerClaimAdmin();}}catch(e){}
+    }
   }else B49.profile=null;
+};
+// ---- bootstrap اولین مدیر (claim_first_admin) ----
+// تنها راه‌ی امن برای تبدیل شدن به اولین مدیر، بدون نقض guard_profile_role.
+B49.claimFirstAdmin=async()=>{
+  const {data,error}=await B49.sb.rpc('claim_first_admin');
+  if(error){B49.toast(B49.faMsg(error.message),'err');return;}
+  if(data){B49.toast('دسترسی مدیر به شما اختصاص یافت. در حال بارگذاری پنل مدیریت…','ok');await B49.loadProfile(B49.user);B49.route();}
+};
+// بنر دائمی (auto-dismiss ندارد) تا کاربر فرصت کلیک داشته باشد.
+B49.offerClaimAdmin=()=>{
+  if($('#claim-banner'))return; // یک‌بار
+  const e=el('div','toast warn','');e.id='claim-banner';e.style.maxWidth='460px';
+  e.innerHTML='هیچ مدیری برای این ساختمان ثبت نشده است. اگر اولین مدیر هستید: <button class="btn btn-sm btn-gold" id="b-claim" type="button" style="margin-inline-start:8px">دریافت دسترسی مدیر</button>';
+  $('#toasts').appendChild(e);
+  const b=$('#b-claim'); if(b)b.onclick=B49.claimFirstAdmin;
 };
 B49.myUnits=()=>{
   if(B49.isAdmin())return B49.cache.units||[];
@@ -471,7 +507,7 @@ B49.showLanding=(mode='resident')=>{
 };
 B49.openKeyModal=()=>{
   const m=el('div','modal-bg');
-  m.innerHTML=`<div class="modal" style="max-width:480px"><div class="modal-head"><h2>⚙️ اتصال به دیتابیس</h2><div class="x">✕</div></div><div class="modal-body">
+  m.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="km-title" style="max-width:480px"><div class="modal-head"><h2 id="km-title">⚙️ اتصال به دیتابیس</h2><button class="x" type="button" aria-label="بستن">✕</button></div><div class="modal-body">
     <div class="land-err" id="l-err"></div>
     <div class="field"><label>URL پروژه</label><input class="inp" id="su-url" dir="ltr" value="${B49.cfg.url}"></div>
     <div class="field"><label>کلید عمومی (anon key)</label><textarea class="inp" id="su-key" dir="ltr" rows="4" placeholder="eyJhbGci..."></textarea></div>
@@ -673,7 +709,7 @@ B49._debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn
 B49.crudForm=(cfg,row)=>{
   const isNew=!row;
   const modal=el('div','modal-bg');
-  modal.innerHTML=`<div class="modal"><div class="modal-head"><h2>${isNew?'افزودن':'ویرایش'} — ${cfg.title}</h2><div class="x">✕</div></div><div class="modal-body" id="mf-body"></div></div>`;
+  modal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mf-title"><div class="modal-head"><h2 id="mf-title">${isNew?'افزودن':'ویرایش'} — ${cfg.title}</h2><button class="x" type="button" aria-label="بستن">✕</button></div><div class="modal-body" id="mf-body"></div></div>`;
   document.body.appendChild(modal);
   const body=$('#mf-body');
   // render fields

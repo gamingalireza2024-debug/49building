@@ -23,6 +23,14 @@
   // و early-return حذف شده: حتی اگر charges خالی باشد، prior/paid محاسبه می‌شوند.
   function unitBalance(cache, uid, fund) {
     cache = cache || {};
+    // Bug B (فیکس): اگر fund مشخص نیست، هرگز تهاتر میان صندوق‌ها نکن.
+    // مجموع بدهی غیرتهاتری = max(0, مانده_ماهانه) + max(0, مانده_عمرانی).
+    // (پیش‌تر bal = due+prior−paid−credit روی هر دو صندوق تهاتر می‌کرد.)
+    if (!fund) {
+      const m = unitBalance(cache, uid, 'monthly');
+      const c = unitBalance(cache, uid, 'construction');
+      return { due: m.due + c.due, paid: m.paid + c.paid, prior: m.prior + c.prior, credit: m.credit + c.credit, bal: Math.max(0, m.bal) + Math.max(0, c.bal) };
+    }
     const charges = cache.charges || [];
     const payments = cache.payments || [];
     const priorArr = cache.prior || [];
@@ -62,7 +70,8 @@
     return (cache.payments || []).filter(p => (p.type || 'monthly') === fund).reduce((s, p) => s + Number(p.amount || 0), 0);
   }
   function fundExpense(cache, fund) {
-    return (cache.expenses || []).filter(e => e.fund === fund).reduce((s, e) => s + Number(e.amount || 0), 0);
+    // Bug A (فیکس): fallback-chain مثل fundIncome تا هزینه با فیلد type یا fund یا پیش‌فرض monthly درست شمرده شود.
+    return (cache.expenses || []).filter(e => (e.fund || e.type || 'monthly') === fund).reduce((s, e) => s + Number(e.amount || 0), 0);
   }
   function fundOpening(cache, fund) {
     const s = cache.settings || {};
@@ -105,16 +114,24 @@
     return (projects || []).map(p => {
       const issued = (charges || []).filter(c => c.project_id === p.id && c.type === 'construction')
         .reduce((s, c) => s + Number(c.amount_due || 0), 0);
-      const collected = (payments || []).filter(pay => pay.project_id === p.id)
+      // Bug C (فیکس): وصول پروژه فقط پرداخت‌های عمرانی را بشمار؛ پرداخت ماهانه با project_id سرگردان تهاتر نمی‌شود.
+      // پیش‌فرض پرداختِ دارای project_id = construction (مگر type صریحاً monthly باشد).
+      const collected = (payments || []).filter(pay => pay.project_id === p.id && (pay.type || 'construction') === 'construction')
         .reduce((s, pay) => s + Number(pay.amount || 0), 0);
-      const exp = (expenses || []).filter(e => e.project_id === p.id)
+      // Bug D (فیکس): هزینه‌ی پروژه فقط هزینه‌های عمرانی را بشمار (پیش‌فرض construction برای هزینه‌ی دارای project_id).
+      const exp = (expenses || []).filter(e => e.project_id === p.id && (e.fund || e.type || 'construction') === 'construction')
         .reduce((s, e) => s + Number(e.amount || 0), 0);
+      // Bug E (فیکس): overpayment به‌جای remaining منفی، در فیلد credit جدا دیده شود.
+      const overpay = Math.max(0, collected - issued);
       return {
         name: p.name, budget: p.budget_approved, issued, collected,
-        remaining: issued - collected, exp,
+        remaining: Math.max(0, issued - collected), credit: overpay, exp,
         cash: collected - exp,
         progress: issued > 0 ? Math.round(collected / issued * 100)
-          : (Number(p.budget_approved) > 0 ? Math.round(exp / Number(p.budget_approved) * 100) : 0)
+          : (Number(p.budget_approved) > 0 ? Math.round(exp / Number(p.budget_approved) * 100) : 0),
+        // Bug F (فیکس): دو معیار جدا برای وصول و اجرا.
+        collection_progress: issued > 0 ? Math.round(collected / issued * 100) : 0,
+        execution_progress: Number(p.budget_approved) > 0 ? Math.round(exp / Number(p.budget_approved) * 100) : 0
       };
     });
   }
@@ -126,11 +143,15 @@
   // خروجی: همان rows با فیلد run اضافه‌شده، مرتب‌شده بر اساس تاریخ.
   function runningBalance(rows) {
     rows = (rows || []).slice();
-    rows.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Bug H (فیکس): تاریخ نامعتبر → Infinity (ته ردیف) به‌جای NaN که ترتیب را نامعین می‌کرد.
+    const t = d => { const x = new Date(d).getTime(); return isNaN(x) ? Infinity : x; };
+    rows.sort((a, b) => t(a.date) - t(b.date));
     let runM = 0, runC = 0;
     rows.forEach(r => {
+      // Bug G (فیکس): فقط fundKey‌های معتبر به عدادار اضافه شوند؛ ردیف نامعتبر آلودگی نمی‌کند.
       if (r.fundKey === 'monthly') { runM += Number(r.debit || 0) - Number(r.credit || 0); r.run = runM; }
-      else { runC += Number(r.debit || 0) - Number(r.credit || 0); r.run = runC; }
+      else if (r.fundKey === 'construction') { runC += Number(r.debit || 0) - Number(r.credit || 0); r.run = runC; }
+      else { r.run = null; }
     });
     return rows;
   }
@@ -151,7 +172,8 @@
       rows.push({ date: c.created_at || '2024-10-01', fundKey: (c.type || 'monthly'), debit: Number(c.amount_due || 0), credit: 0 });
     });
     (cache.payments || []).filter(p => p.unit_id === uid).forEach(p => {
-      rows.push({ date: p.payment_date, fundKey: (p.type || 'monthly'), debit: 0, credit: Number(p.amount || 0) });
+      // Bug H (فیکس): fallback تاریخ برای payment_date خالی تا عدادار تجمعی به‌هم نریزد.
+      rows.push({ date: p.payment_date || p.created_at || '2024-10-01', fundKey: (p.type || 'monthly'), debit: 0, credit: Number(p.amount || 0) });
     });
     return runningBalance(rows);
   }
@@ -166,7 +188,8 @@
     try {
       audit(ctx);
     } catch (e) {
-      if (typeof op.undo === 'function') op.undo(ctx);
+      // Bug J (فیکس): اگر undo هم خطا دهد، دلیل اصلی audit پوشانده نشود.
+      if (typeof op.undo === 'function') { try { op.undo(ctx); } catch (u) { console.error('[B49Acc] undo هم شکست خورد:', u); } }
       throw e;
     }
     return ctx;
