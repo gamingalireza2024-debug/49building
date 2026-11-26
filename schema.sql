@@ -106,7 +106,8 @@ create table if not exists public.building_settings (
   whatsapp_link text,
   manager_name  text,
   manager_phone text,
-  address       text
+  address       text,
+  access_code   text
 );
 insert into public.building_settings (id) values (1) on conflict (id) do nothing;
 

@@ -2,6 +2,7 @@
 --  ساختمان ۴۹ — Migration v3: امنیت + صحت حسابداری + RPCهای اتمیک
 --  این فایل نسخه‌ی نهایی و ایمن migration_v3 است (جایگزین نسخه‌ی قبلی).
 --  idempotent و additive؛ هیچ داده‌ی مالی بدون backup حذف نمی‌شود.
+--  شامل فاز نهایی: bootstrap اولین مدیر + گارد صندوق.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -14,19 +15,31 @@ $$;
 
 -- ---------------------------------------------------------------------
 -- ۲) profiles: جلوگیری از ارتقای نقش توسط کاربر غیرادمین (trigger)
+--    نسخه‌ی ۲: با escape hatch برای bootstrap اولین مدیر.
 --    auth.uid() is null → دسترسی مستقیم SQL (SQL Editor) → bootstrap ادمین مجاز
+--    اگر هنوز هیچ مدیری وجود نداشت، اجازه‌ی تغییر نقش (INSERT/UPDATE) بده.
+--    این تنها راه‌گشای chicken-and-egg اولین مدیر است.
 -- ---------------------------------------------------------------------
 create or replace function public.guard_profile_role()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  admin_count int;
 begin
   if TG_OP = 'INSERT' then
     if new.role is null then new.role := 'member'; end if;
+    -- bootstrap: اگر هنوز مدیر وجود ندارد، اجازه‌ی ایجاد مدیر بده.
+    select count(*) into admin_count from public.profiles where role = 'admin';
+    if admin_count = 0 then return new; end if;
     if new.role <> 'member' and auth.uid() is not null and not public.is_admin() then
       new.role := 'member';
     end if;
     return new;
   end if;
+  -- UPDATE
   if new.role is distinct from old.role then
+    -- bootstrap: اگر هنوز مدیر وجود ندارد، اجازه‌ی ارتقا بده (claim_first_admin).
+    select count(*) into admin_count from public.profiles where role = 'admin';
+    if admin_count = 0 then return new; end if;
     if auth.uid() is not null and not public.is_admin() then
       raise exception 'تغییر نقش (role) تنها توسط مدیر ساختمان یا از SQL Editor ممکن است';
     end if;
@@ -35,9 +48,10 @@ begin
 end;
 $$;
 drop trigger if exists trg_guard_profile_role on public.profiles;
+drop trigger if exists guard_profile_role on public.profiles;
 create trigger trg_guard_profile_role
   before insert or update on public.profiles
-  for each row execute procedure public.guard_profile_role();
+  for each row execute function public.guard_profile_role();
 
 -- ---------------------------------------------------------------------
 -- ۳) audit_log: actor باید برابر auth.uid() باشد (جلوگیری از سابقه‌ی جعلی)
@@ -307,7 +321,77 @@ $$;
 grant execute on function public.record_expense(text, bigint, text, bigint, date, text, text, text, bigint, text, text, text) to authenticated;
 
 -- =====================================================================
+-- ۱۰) admin_exists: بررسی امن (RPC) اینکه آیا مدیر وجود دارد یا خیر.
+--     کاربر عضو نمی‌تواند profiles را بخواند (RLS)، پس این RPC لازم است.
+-- =====================================================================
+create or replace function public.admin_exists()
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  return exists(select 1 from public.profiles where role = 'admin');
+end;
+$$;
+revoke execute on function public.admin_exists() from public, anon;
+grant execute on function public.admin_exists() to authenticated;
+
+-- ---------------------------------------------------------------------
+-- ۱۱) claim_first_admin: اگر هیچ مدیری وجود نداشت، کاربر فراخوان را به مدیر ارتقا بدهد.
+--     بلافاصله بعد از اولین مدیر، فراخوان‌های بعدی استثنا می‌اندازند.
+--     امن: security definer، و guard_profile_role به‌خاطر admin_count=0 اجازه می‌دهد.
+-- ---------------------------------------------------------------------
+create or replace function public.claim_first_admin()
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  caller uuid := auth.uid();
+  admin_count int;
+begin
+  if caller is null then
+    raise exception 'claim_first_admin فقط برای کاربر احراز‌هویت‌شده قابل فراخوانی است';
+  end if;
+  select count(*) into admin_count from public.profiles where role = 'admin';
+  if admin_count > 0 then
+    raise exception 'یک مدیر از قبل وجود دارد. برای ارتقا، با مدیر فعلی تماس بگیرید.';
+  end if;
+  update public.profiles set role = 'admin' where id = caller;
+  if not found then
+    raise exception 'پروفایل شما یافت نشد. ابتدا وارد شوید سپس دوباره تلاش کنید.';
+  end if;
+  return 'ok';
+end;
+$$;
+revoke execute on function public.claim_first_admin() from public, anon;
+grant execute on function public.claim_first_admin() to authenticated;
+
+-- ---------------------------------------------------------------------
+-- ۱۲) گارد seeding: افتتاحیه‌ی صندوق باید عدد صحیح نامنفی باشد.
+--     نکته: PostgreSQL از «ADD CONSTRAINT IF NOT EXISTS» پشتیبانی نمی‌کند؛
+--     پس با بلوک DO و بررسی pg_constraint، idempotent ساخته می‌شود.
+-- ---------------------------------------------------------------------
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'chk_fund_monthly_opening_nonneg'
+      and conrelid = 'public.building_settings'::regclass
+  ) then
+    alter table public.building_settings
+      add constraint chk_fund_monthly_opening_nonneg
+      check (fund_monthly_opening is null or fund_monthly_opening >= 0);
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'chk_fund_construction_opening_nonneg'
+      and conrelid = 'public.building_settings'::regclass
+  ) then
+    alter table public.building_settings
+      add constraint chk_fund_construction_opening_nonneg
+      check (fund_construction_opening is null or fund_construction_opening >= 0);
+  end if;
+end
+$$;
+
+-- =====================================================================
 --  پایان — هیچ داده‌ی مالی بدون backup حذف نشد.
+--  فاز نهایی شامل: bootstrap اولین مدیر + گارد صندوق (sections 10-12).
 --  اگر نسخه‌ی قبلی migration_v3 (commit bd48ea4) را که بدون backup
 --  رکوردهای تکراری prior_debts را حذف می‌کرد، قبلاً اجرا کرده‌اید،
 --  آن رکوردها فقط از backup روزانه‌ی Supabase (PITR) قابل بازیابی‌اند.
