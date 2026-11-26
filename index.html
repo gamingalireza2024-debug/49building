@@ -244,6 +244,37 @@ button:focus-visible,a:focus-visible,.inp:focus-visible{outline:2px solid var(--
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 }
 
+/* ===================== تم روشن (روز) ===================== */
+/* با data-theme="light" روی <html> فعال می‌شود. */
+html[data-theme="light"]{
+  --bg:#F4F6FA; --bg2:#E8ECF2; --panel:#FFFFFF; --panel2:#F0F3F8; --panel3:#E4E9F0;
+  --border:rgba(212,169,65,.22); --border-2:rgba(212,169,65,.35); --line:rgba(0,0,0,.07);
+  --text:#1A2032; --muted:#5A6577; --faint:#7B8595;
+  --gold-soft:rgba(212,169,65,.10); --gold-glow:0 0 40px rgba(212,169,65,.06);
+  --shadow:0 8px 24px rgba(0,0,0,.10); --shadow-sm:0 3px 10px rgba(0,0,0,.08);
+}
+html[data-theme="light"] body{background:var(--bg)}
+html[data-theme="light"] .landing{
+  background:radial-gradient(1100px 600px at 80% 0%,rgba(212,169,65,.06),transparent),radial-gradient(900px 500px at 10% 100%,rgba(46,111,224,.04),transparent),var(--bg)}
+html[data-theme="light"] .glass{background:rgba(255,255,255,.82);backdrop-filter:blur(16px)}
+html[data-theme="light"] .inp{background:rgba(240,243,248,.7);border-color:rgba(0,0,0,.12)}
+html[data-theme="light"] .inp:focus{background:#fff}
+html[data-theme="light"] .sidebar{background:linear-gradient(180deg,#fff,var(--bg2))}
+html[data-theme="light"] .nav a:hover{background:var(--panel2)}
+html[data-theme="light"] .topbar{background:rgba(255,255,255,.85);border-bottom:1px solid var(--border)}
+html[data-theme="light"] .card{background:var(--panel);border:1px solid var(--line)}
+html[data-theme="light"] .land-photo .fade{
+  background:linear-gradient(90deg,transparent 40%,rgba(244,246,250,.5) 70%,var(--bg) 100%),linear-gradient(180deg,rgba(244,246,250,.3),transparent 30%,rgba(244,246,250,.4))}
+html[data-theme="light"] .modal-bg{background:rgba(0,0,0,.35)}
+html[data-theme="light"] .modal{background:var(--panel);border:1px solid var(--border)}
+html[data-theme="light"] table tbody tr:hover{background:var(--panel2)}
+html[data-theme="light"] .toast{background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+/* دکمه‌ی سوئیچ تم */
+.theme-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);transition:.15s}
+.theme-toggle:hover{background:var(--panel3);border-color:var(--border-2)}
+.theme-toggle .ti{font-size:14px}
+
 </style>
 </head>
 <body>
@@ -269,13 +300,78 @@ B49.sb = null;
 try { if (B49.cfg.url && B49.cfg.key) B49.sb = supabase.createClient(B49.cfg.url, B49.cfg.key); } catch(e){}
 
 // ---- وضعیت ----
-B49.user=null; B49.profile=null; B49.cache={}; B49._charts=[];
+B49.user=null; B49.profile=null; B49.cache={}; B49._charts=[]; B49.guest=null;
 
 // ---- کمک‌تابع‌ها ----
 const $=(s,p=document)=>p.querySelector(s);
 const $$=(s,p=document)=>[...p.querySelectorAll(s)];
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 B49.toast=(m,t='ok')=>{const e=el('div','toast '+t,m);$('#toasts').appendChild(e);setTimeout(()=>{e.style.opacity=0;setTimeout(()=>e.remove(),300)},3200);};
+// ---- ترجمه‌ی پیام‌های خطای Supabase/PostgreSQL به فارسی ----
+// دلیل: پیام‌های پیش‌فرض انگلیسی هستند و کاربر نمی‌فهمد چرا ارور داده شده.
+B49.faMsg=(msg)=>{
+  if(!msg)return 'خطای ناشناخته رخ داد';
+  const m=String(msg).toLowerCase();
+  const map=[
+    ['invalid login credentials','ایمیل یا رمز عبور اشتباه است. دوباره تلاش کنید.'],
+    ['email not confirmed','ایمیل شما تأیید نشده است. صندوق ایمیل خود را بررسی کنید و روی لینک تأیید کلیک کنید.'],
+    ['user already registered','این ایمیل قبلاً ثبت شده است. به جای ثبت‌نام، وارد شوید.'],
+    ['password should be at least 6 characters','رمز عبور باید حداقل ۶ کاراکتر باشد.'],
+    ['password is too short','رمز عبور خیلی کوتاه است. حداقل ۶ کاراکتر وارد کنید.'],
+    ['unable to validate email address','آدرس ایمیل معتبر نیست. یک ایمیل صحیح وارد کنید.'],
+    ['email rate limit exceeded','تعداد درخواست‌ها زیاد بوده است. چند دقیقه بعد دوباره تلاش کنید.'],
+    ['jwt expired','نشست شما منقضی شده است. دوباره وارد شوید.'],
+    ['jwt invalid','نشست شما نامعتبر است. دوباره وارد شوید.'],
+    ['refresh token not found','نشست شما منقضی شده است. دوباره وارد شوید.'],
+    ['not authorized','شما دسترسی به این عمل ندارید.'],
+    ['permission denied','شما دسترسی به این عمل ندارید. این عمل نیاز به نقش مدیر دارد.'],
+    ['row level security','دسترسی محدود: این عمل توسط سیاست امنیتی پایگاه داده مسدود شد.'],
+    ['policy','دسترسی محدود: سیاست امنیتی اجازه‌ی این عمل را نمی‌دهد.'],
+    ['network','خطای شبکه: اتصال به سرور ناموفق بود. اتصال اینترنت خود را بررسی کنید.'],
+    ['failed to fetch','خطای شبکه: اتصال به سرور ناموفق بود. اتصال اینترنت خود را بررسی کنید.'],
+    ['duplicate key','این رکورد قبلاً ثبت شده است. رکورد تکراری مجاز نیست.'],
+    ['unique constraint','این مقدار قبلاً استفاده شده است. یک مقدار دیگر انتخاب کنید.'],
+    ['foreign key','رکورد مرتبط یافت نشد. ابتدا رکورد وابسته را ایجاد کنید.'],
+    ['not-null constraint','یک فیلد اجباری خالی است. همه‌ی فیلدهای الزامی را پر کنید.'],
+    ['check constraint','مقدار واردشده با قوانین اعتبارسنجی سازگار نیست.'],
+    ['relationship violation','رکورد مرتبط یافت نشد.'],
+    ['does not exist','رکورد موردنظر یافت نشد. ممکن است حذف شده باشد.'],
+    ['syntax error','خطای نحوی در پایگاه داده. با پشتیبانی تماس بگیرید.'],
+    ['rate limit','تعداد درخواست‌ها زیاد بوده است. چند لحظه بعد دوباره تلاش کنید.'],
+    ['overload','سرور در حال حاضر پر از درخواست است. بعداً دوباره تلاش کنید.'],
+    ['timeout','زمان درخواست به پایان رسید. دوباره تلاش کنید.'],
+    ['connection','اتصال به پایگاه داده برقرار نشد. بعداً دوباره تلاش کنید.'],
+    ['storage','خطای ذخیره‌سازی: فایل آپلود نشد.'],
+    ['bucket not found','فضای ذخیره‌سازی یافت نشد.'],
+    ['already exists','این آیتم قبلاً وجود دارد.'],
+    ['signup disabled','ثبت‌نام توسط مدیر غیرفعال شده است.'],
+    ['email provider not enabled','ورود با ایمیل فعال نیست. با مدیر تماس بگیرید.'],
+    ['captcha','تأیید کپچا ناموفق بود. دوباره تلاش کنید.'],
+    ['weak password','رمز عبور ضعیف است. از حروف و اعداد بیشتری استفاده کنید.'],
+    ['user not found','کاربر یافت نشد. ممکن است حساب حذف شده باشد.'],
+    ['session missing','نشست شما معتبر نیست. دوباره وارد شوید.'],
+    ['session not found','نشست شما معتبر نیست. دوباره وارد شوید.'],
+    ['multiple','چندین رکورد یافت شد. با مدیر تماس بگیرید.'],
+    ['column does not exist','یک فیلد در پایگاه داده وجود ندارد. اسکیمای دیتابیس را به‌روز کنید.'],
+    ['column reference is ambiguous','ارجاع ستون مبهم است.'],
+    ['function does not exist','تابع پایگاه داده یافت نشد. migration را اجرا کنید.'],
+    ['trigger does not exist','ترایگر پایگاه داده یافت نشد.'],
+    ['schema','خطای اسکیمای پایگاه داده.'],
+    ['uniqueness violation','این مقدار باید یکتا باشد. مقدار دیگری انتخاب کنید.'],
+    ['value too long','متن واردشده خیلی طولانی است.'],
+  ];
+  for(const [k,v] of map){if(m.includes(k))return v;}
+  // اگر کلید خطای PostgreSQL با کد داشت (مثل 23505)
+  if(/23505/.test(m))return 'این رکورد قبلاً ثبت شده است. رکورد تکراری مجاز نیست.';
+  if(/23503/.test(m))return 'رکورد مرتبط یافت نشد. ابتدا رکورد وابسته را ایجاد کنید.';
+  if(/23502/.test(m))return 'یک فیلد اجباری خالی است. همه‌ی فیلدهای الزامی را پر کنید.';
+  if(/23514/.test(m))return 'مقدار واردشده با قوانین اعتبارسنجی سازگار نیست.';
+  if(/42501/.test(m))return 'شما دسترسی به این عمل ندارید.';
+  if(/42P01/.test(m))return 'جدول پایگاه داده یافت نشد. اسکیمای دیتابیس را به‌روز کنید.';
+  if(/42804/.test(m))return 'نوع داده نامطبابق است.';
+  // پیام ناشناخته — برگردان ولی با پیشوند
+  return 'خطا: '+String(msg);
+};
 B49.faDigits=s=>String(s==null?'':s).replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
 B49.toEn=s=>String(s==null?'':s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 B49.rial=n=>{if(n==null||isNaN(n))n=0;n=Number(n);const sign=n<0?'-':'';n=Math.abs(Math.round(n));return B49.faDigits(sign+n.toLocaleString('en-US'))+' ریال';};
@@ -439,6 +535,14 @@ B49.go=(h)=>{location.hash=h;};
 B49.route=async()=>{
   const raw=location.hash.replace('#','')||'home';
   const [route,...args]=raw.split('/');
+  // --- ورود مهمان: بدون Supabase Auth، فقط پرونده‌ی واحد ---
+  if(B49.guest){
+    B49.mountShell();
+    B49.setTitle('پرونده‌ی مالی واحد '+B49.faDigits(B49.guest.unit.number),' مشاهده‌ی مهمان');
+    $$('.nav a').forEach(a=>a.style.display='none');
+    await B49.renderResidentView(B49.guest.unitId);
+    return;
+  }
   if(!B49.user){B49.showLanding();return;}
   if(!B49.isAdmin()){
     // ساکن: فقط پرونده‌ی واحد خودش
@@ -481,7 +585,15 @@ B49.showLanding=(mode='resident')=>{
           <div class="field"><label>ایمیل / نام کاربری</label><div class="inp-wrap"><span class="ic">👤</span><input class="inp" id="l-email" type="email" dir="ltr" placeholder="email@example.com" style="padding-right:38px"></div></div>
           <div class="field"><label>رمز عبور</label><div class="inp-wrap"><span class="ic">🔒</span><input class="inp" id="l-pass" type="password" dir="ltr" placeholder="••••••••" style="padding-right:38px"></div></div>
           <button class="btn btn-gold btn-block" id="l-submit">ورود <span style="font-size:16px">‹</span></button>
-          <div class="land-switch" id="l-toggle">ساکن جدید؟ <a id="l-signup-link">ثبت‌نام کنید</a></div>
+          <div class="land-switch" id="l-toggle">ساکن جدید؟ <a id="l-signup-link">ثبت‌نام کنید</a> | <a id="l-guest-link">🔑 ورود مهمان</a></div>
+        </div>
+        <div id="l-guest-form" style="display:none">
+          <h2>🔑 ورود مهمان</h2>
+          <div class="gs">کد دسترسی واحد خود را وارد کنید</div>
+          <div class="land-err" id="l-guest-err"></div>
+          <div class="field"><label>کد دسترسی</label><div class="inp-wrap"><span class="ic">🔑</span><input class="inp" id="l-guest-code" dir="ltr" placeholder="کد ۶ رقمی" style="padding-right:38px;text-align:center;letter-spacing:3px"></div></div>
+          <button class="btn btn-gold btn-block" id="l-guest-submit">ورود به پرونده‌ی واحد <span style="font-size:16px">‹</span></button>
+          <div class="land-switch" id="l-guest-back"><a id="l-guest-back-link">↩ بازگشت به ورود عادی</a></div>
         </div>
       </div>
       ${noKey?`<button class="btn btn-ghost btn-sm" id="l-key" style="position:absolute;bottom:16px;left:16px">⚙️ اتصال به دیتابیس</button>`:''}
@@ -491,6 +603,19 @@ B49.showLanding=(mode='resident')=>{
   if(noKey)$('#l-key').onclick=B49.openKeyModal;
   $('#l-admin').onclick=()=>{B49.showLanding('admin');setTimeout(()=>$('#l-email').focus(),50);};
   $('#l-toggle').onclick=(e)=>{if(e.target.id==='l-signup-link'){signup=!signup;$('#l-signup').style.display=signup?'block':'none';$('#l-submit').textContent=signup?'ثبت‌نام و ورود':'ورود';$('#l-signup-link').textContent=signup?'ورود به حساب':'ثبت‌نام کنید';$('#l-title').textContent=signup?'ثبت‌نام ساکن جدید':(mode==='admin'?'ورود مدیر ساختمان':'ورود ساکنین');$('#l-sub').textContent=signup?'حساب ساکن بسازید (ادمین نمی‌شود)':'';}};
+  // --- ورود مهمان ---
+  $('#l-guest-link').onclick=()=>{$('#l-form').style.display='none';$('#l-guest-form').style.display='block';setTimeout(()=>$('#l-guest-code').focus(),50);};
+  $('#l-guest-back-link').onclick=()=>{$('#l-guest-form').style.display='none';$('#l-form').style.display='block';$('#l-guest-code').value='';$('#l-guest-err').classList.remove('show');setTimeout(()=>$('#l-email').focus(),50);};
+  $('#l-guest-code').addEventListener('keydown',e=>{if(e.key==='Enter')$('#l-guest-submit').click();});
+  $('#l-guest-submit').onclick=async()=>{
+    const code=$('#l-guest-code').value.trim();const err=$('#l-guest-err');err.classList.remove('show');
+    if(!code){err.textContent='کد دسترسی را وارد کنید';err.classList.add('show');return;}
+    if(!B49.sb){err.textContent='اتصال به دیتابیس برقرار نیست.';err.classList.add('show');return;}
+    const {data,error}=await B49.sb.rpc('guest_login',{p_code:code});
+    if(error){err.textContent=B49.faMsg(error.message);err.classList.add('show');return;}
+    if(!data){err.textContent='کد دسترسی اشتباه است یا برای واحد شما کدی تعریف نشده. با مدیر ساختمان تماس بگیرید.';err.classList.add('show');return;}
+    B49.guest={unitId:data.id,unit:data};B49.mountShell();B49.go('guest-view');
+  };
   $('#l-submit').onclick=async()=>{
     const email=$('#l-email').value.trim();const pass=$('#l-pass').value;
     const err=$('#l-err');err.classList.remove('show');
@@ -529,22 +654,44 @@ B49.mountShell=()=>{
   if($('#shell'))return;
   const u=B49.user?.email||'';const initial=(B49.profile?.full_name||u||'?')[0]?.toUpperCase()||'?';
   const name=B49.profile?.full_name||u;
+  const isGuest=!!B49.guest;
+  const guestName=isGuest?'مهمان — واحد '+B49.faDigits(B49.guest.unit.number):name;
+  const guestInitial=isGuest?'م':initial;
+  const guestRole=isGuest?'مهمان (فقط مشاهده)':(B49.isAdmin()?'مدیر ساختمان':'ساکن');
   $('#app').innerHTML=`<div class="app" id="shell">
     <aside class="sidebar" id="sidebar">
       <div class="side-head" onclick="location.hash='dashboard'"><div class="sl"><div class="si"><img src="logo.png"></div></div><div class="bn">ساختمان ۴۹<small>سامانه مدیریت</small></div></div>
       <nav class="nav" id="nav">${B49.navItems.map(g=>`<div class="grp">${g.grp}</div>`+g.items.map(it=>`<a data-r="${it[0]}" onclick="B49.go('${it[0]}')"><span class="ic">${it[2]}</span><span>${it[1]}</span></a>`).join('')).join('')}</nav>
       <div class="side-foot">
-        <div class="u"><div class="av">${B49.escape(initial)}</div><div><div class="nm">${B49.escape(name)}</div><div class="rl">${B49.isAdmin()?'مدیر ساختمان':'ساکن'}</div></div></div>
-        <button class="btn btn-ghost btn-sm btn-block" id="logout">خروج</button>
+        <div class="u"><div class="av">${B49.escape(guestInitial)}</div><div><div class="nm">${B49.escape(guestName)}</div><div class="rl">${guestRole}</div></div></div>
+        <button class="btn btn-ghost btn-sm btn-block" id="logout">${isGuest?'خروج از پرونده':'خروج'}</button>
       </div>
     </aside>
     <div class="main">
-      <header class="topbar"><button class="menu-toggle" id="mtoggle">☰</button><div class="tt" id="page-title">داشبورد</div><div class="sp"><div class="jm">📅 ${B49.todayJalali()}</div></div></header>
+      <header class="topbar"><button class="menu-toggle" id="mtoggle">☰</button><div class="tt" id="page-title">داشبورد</div><div class="sp"><div class="theme-toggle" id="theme-toggle" title="تغییر تم روز/شب"><span class="ti" id="theme-icon">🌙</span><span id="theme-label">شب</span></div><div class="jm">📅 ${B49.todayJalali()}</div></div></header>
       <main class="content" id="content"><div class="spin"></div></main>
     </div>
   </div>`;
-  $('#logout').onclick=async()=>{try{await B49.sb.auth.signOut();}catch(e){}B49.user=null;B49.profile=null;B49.cache={};history.replaceState(null,'',location.pathname+location.search);B49.showLanding();};
+  $('#logout').onclick=async()=>{
+    if(B49.guest){B49.guest=null;history.replaceState(null,'',location.pathname+location.search);B49.showLanding();return;}
+    try{await B49.sb.auth.signOut();}catch(e){}
+    B49.user=null;B49.profile=null;B49.cache={};history.replaceState(null,'',location.pathname+location.search);B49.showLanding();
+  };
   $('#mtoggle').onclick=()=>$('#sidebar').classList.toggle('open');
+  // --- سوئیچ تم روز/شب ---
+  const applyTheme=()=>{
+    const t=localStorage.getItem('b49_theme')||'dark';
+    document.documentElement.setAttribute('data-theme',t);
+    if($('#theme-icon')){$('#theme-icon').textContent=t==='light'?'☀️':'🌙';}
+    if($('#theme-label')){$('#theme-label').textContent=t==='light'?'روز':'شب';}
+  };
+  applyTheme();
+  if($('#theme-toggle'))$('#theme-toggle').onclick=()=>{
+    const cur=localStorage.getItem('b49_theme')||'dark';
+    const nxt=cur==='dark'?'light':'dark';
+    localStorage.setItem('b49_theme',nxt);
+    applyTheme();
+  };
 };
 B49.setTitle=(t,sub='')=>{const e=$('#page-title');if(e)e.innerHTML=B49.escape(t)+(sub?`<small>${B49.escape(sub)}</small>`:'');};
 
@@ -822,6 +969,7 @@ B49.unitForm=(unit)=>{
       <div class="field form-row"><label>شماره واحد <span class="req">*</span></label><input class="inp" id="f-number" dir="ltr" value="${unit?B49.faDigits(unit.number||''):''}" placeholder="مثلاً ۱۰۱"></div>
       <div class="field form-row"><label>طبقه</label><input class="inp" id="f-floor" dir="ltr" inputmode="numeric" value="${unit?B49.faDigits(unit.floor||''):''}" placeholder="مثلاً ۱"></div>
       <div class="field form-row"><label>متراژ (متر مربع)</label><input class="inp" id="f-area" dir="ltr" inputmode="numeric" value="${unit?B49.faDigits(unit.area||''):''}" placeholder="مثلاً ۱۲۰"></div>
+      <div class="field form-row"><label>🔑 کد دسترسی مهمان</label><div style="display:flex;gap:6px"><input class="inp" id="f-guest-code" dir="ltr" value="${unit?B49.escape(unit.guest_code||''):''}" placeholder="خالی = بدون دسترسی مهمان" style="flex:1"><button class="btn btn-ghost btn-sm" id="f-gen-code" type="button" title="تولید کد تصادفی">🎲</button></div></div>
     </div>
     <div style="font-size:12px;color:var(--gold-l);font-weight:700;margin:16px 0 10px;border-bottom:1px solid var(--border-2);padding-bottom:6px">👤 مالک</div>
     <div class="grid2">
@@ -846,6 +994,7 @@ B49.unitForm=(unit)=>{
   modal.querySelector('.x').onclick=close;modal.onclick=e=>{if(e.target===modal)close();};
   $('#mf-cancel').onclick=close;
   $('#f-rented').onchange=e=>{$('#tenant-fields').style.display=e.target.checked?'block':'none';};
+  $('#f-gen-code').onclick=()=>{$('#f-guest-code').value=String(Math.floor(100000+Math.random()*900000));};
   const saveBtn=$('#mf-save');
   saveBtn.onclick=async()=>{
    if(saveBtn.disabled)return; saveBtn.disabled=true; const orig=saveBtn.textContent; saveBtn.textContent='در حال ذخیره...';
@@ -868,6 +1017,9 @@ B49.unitForm=(unit)=>{
     // اگر هر مرحله شکست بخورد، کل تراکنش rollback می‌شود (نه compensating delete).
     const res=await B49.q.rpc('save_unit_owner_tenant',{p_unit:unitObj,p_owner:ownerObj,p_tenant:tenantObj,p_tenant_remove:tenantRemove});
     if(!res){B49.toast('ذخیره‌ی واحد ناموفق بود (پیام خطا بالا نمایش داده شد)','err');return;}
+    // ذخیره‌ی کد دسترسی مهمان (جدا از RPC، چون RPC فقط number/floor/area را ذخیره می‌کند)
+    const guestCode=B49.toEn($('#f-guest-code').value).trim();
+    if(res.unit_id){await B49.q.update('units',res.unit_id,{guest_code:guestCode||null});}
     B49.toast('واحد با موفقیت ذخیره شد','ok');close();B49.go('units');B49.route();
    }catch(e){console.error('[unit save]',e);B49.toast('خطای غیرمنتظره در ذخیره: '+(e&&e.message?e.message:e),'err');}
    finally{saveBtn.disabled=false;saveBtn.textContent=orig;}
@@ -1171,7 +1323,56 @@ B49.reportDefs=[
  {id:'compare',icon:'📊',title:'مقایسه‌ی ماهانه و سالانه',desc:'مقایسه‌ی درآمد/هزینه',filters:{},
   build(f){const ms=B49.lastMonths(6);const rows=ms.map(m=>{const inc=(B49.cache.payments||[]).filter(p=>p.jmonth===m).reduce((s,p)=>s+Number(p.amount||0),0);const exp=(B49.cache.expenses||[]).filter(e=>e.jmonth===m).reduce((s,e)=>s+Number(e.amount||0),0);return {m,inc,exp};});return {columns:[{key:'m',label:'ماه',render:v=>B49.jMonthLabel(v)},B49.mc('inc','درآمد'),B49.mc('exp','هزینه'),{key:'d',label:'اختلاف',num:true,render:v=>B49.rial(v)}],rows:rows.map(r=>({...r,d:r.inc-r.exp})),summary:[]};}},
  {id:'all-tx',icon:'📜',title:'تمام تراکنش‌ها',desc:'همه‌ی تراکنش‌های مالی',filters:{fund:true},
-  build(f){let r=[];(B49.cache.payments||[]).forEach(p=>r.push({d:p.payment_date,type:'پرداخت',unit:p.unit_id,fund:p.type||'monthly',amt:Number(p.amount||0),note:p.note||'-',code:'PY-'+p.id}));(B49.cache.expenses||[]).forEach(e=>r.push({d:e.expense_date,type:'هزینه',unit:null,fund:e.fund,amt:-Number(e.amount||0),note:e.title,code:'EX-'+e.id}));if(f.fund)r=r.filter(x=>x.fund===f.fund);r.sort((a,b)=>new Date(b.d)-new Date(a.d));return {columns:[{key:'code',label:'کد'},{key:'d',label:'تاریخ',render:v=>B49.gToJstr(v)},{key:'type',label:'نوع'},{key:'unit',label:'واحد',render:v=>v?B49.unitOpt(v):'—'},{key:'fund',label:'صندوق',render:v=>v==='construction'?'عمرانی':'ماهانه'},{key:'amt',label:'مبلغ',num:true,render:v=>B49.rial(Math.abs(v))},{key:'note',label:'توضیحات',render:v=>B49.escape(v)}],rows:r,summary:[{label:'تعداد',value:B49.faDigits(r.length)},{label:'خالص',value:B49.rial(r.reduce((s,x)=>s+x.amt,0))}]};}}
+  build(f){let r=[];(B49.cache.payments||[]).forEach(p=>r.push({d:p.payment_date,type:'پرداخت',unit:p.unit_id,fund:p.type||'monthly',amt:Number(p.amount||0),note:p.note||'-',code:'PY-'+p.id}));(B49.cache.expenses||[]).forEach(e=>r.push({d:e.expense_date,type:'هزینه',unit:null,fund:e.fund,amt:-Number(e.amount||0),note:e.title,code:'EX-'+e.id}));if(f.fund)r=r.filter(x=>x.fund===f.fund);r.sort((a,b)=>new Date(b.d)-new Date(a.d));return {columns:[{key:'code',label:'کد'},{key:'d',label:'تاریخ',render:v=>B49.gToJstr(v)},{key:'type',label:'نوع'},{key:'unit',label:'واحد',render:v=>v?B49.unitOpt(v):'—'},{key:'fund',label:'صندوق',render:v=>v==='construction'?'عمرانی':'ماهانه'},{key:'amt',label:'مبلغ',num:true,render:v=>B49.rial(Math.abs(v))},{key:'note',label:'توضیحات',render:v=>B49.escape(v)}],rows:r,summary:[{label:'تعداد',value:B49.faDigits(r.length)},{label:'خالص',value:B49.rial(r.reduce((s,x)=>s+x.amt,0))}]};}},
+ // ---- گزارش جدید: ترازنامه کلی ----
+ {id:'balance-sheet',icon:'📋',title:'ترازنامه کلی',desc:'دارایی‌ها، بدهی‌ها و موجودی صندوق‌ها',filters:{},
+  build(f){
+    const fm=B49.fundBalance('monthly'),fc=B49.fundBalance('construction');
+    const fmOp=B49.fundOpening('monthly'),fcOp=B49.fundOpening('construction');
+    const fmInc=B49.fundIncome('monthly'),fcInc=B49.fundIncome('construction');
+    const fmExp=B49.fundExpense('monthly'),fcExp=B49.fundExpense('construction');
+    const totalDebt=(B49.cache.units||[]).reduce((s,u)=>s+B49.unitTotalDebt(u.id),0);
+    const totalPrior=(B49.cache.prior||[]).reduce((s,d)=>s+Number(d.monthly_initial||0)+Number(d.construction_initial||0)-Number(d.credit_monthly||0)-Number(d.credit_construction||0),0);
+    const rows=[
+      {k:'💵 موجودی صندوق ماهانه',v:fm,grp:'دارایی'},
+      {k:'🏗️ موجودی صندوق عمرانی',v:fc,grp:'دارایی'},
+      {k:'📥 مطالبات از ساکنین (بدهی کل)',v:totalDebt,grp:'دارایی'},
+      {k:'──────────────',v:null,grp:''},
+      {k:'📊 افتتاحیه صندوق ماهانه',v:fmOp,grp:'تفصیلی'},
+      {k:'📊 درآمد ماهانه',v:fmInc,grp:'تفصیلی'},
+      {k:'📊 هزینه ماهانه',v:fmExp,grp:'تفصیلی'},
+      {k:'📊 افتتاحیه صندوق عمرانی',v:fcOp,grp:'تفصیلی'},
+      {k:'📊 درآمد عمرانی',v:fcInc,grp:'تفصیلی'},
+      {k:'📊 هزینه عمرانی',v:fcExp,grp:'تفصیلی'},
+      {k:'──────────────',v:null,grp:''},
+      {k:'📋 بدهی‌های اولیه کل',v:totalPrior,grp:'بدهی'},
+    ];
+    return {columns:[{key:'k',label:'شرح'},{key:'v',label:'مبلغ',num:true,render:v=>v==null?'':B49.rial(v)}],rows,summary:[{label:'مجموع دارایی (صندوق‌ها)',value:B49.rial(fm+fc)},{label:'مطالبات از ساکنین',value:B49.rial(totalDebt)}]};}},
+ // ---- گزارش جدید: مقایسه‌ی واحدها ----
+ {id:'unit-compare',icon:'🏢',title:'مقایسه‌ی واحدها',desc:'مانده همه‌ی واحدها در یک جدول',filters:{},
+  build(f){const rows=(B49.cache.units||[]).map(u=>{
+    const bm=B49.unitBalance(u.id,'monthly'),bc=B49.unitBalance(u.id,'construction');
+    const total=B49.unitTotalDebt(u.id);
+    return {u:u.id,monthly:bm.bal,construction:bc.bal,total,status:total>0?'بدهکار':'تسویه'};
+  }).sort((a,b)=>b.total-a.total);
+  return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},B49.mc('monthly','مانده ماهانه'),B49.mc('construction','مانده عمرانی'),B49.mc('total','مجموع بدهی'),{key:'status',label:'وضعیت',render:v=>`<span class="badge ${v==='بدهکار'?'b-debt':'b-ok'}">${v}</span>`}],rows,summary:[{label:'تعداد کل واحدها',value:B49.faDigits(rows.length)},{label:'تعداد بدهکار',value:B49.faDigits(rows.filter(r=>r.total>0).length)},{label:'مجموع بدهی',value:B49.rial(rows.reduce((s,r)=>s+r.total,0))}]};}},
+ // ---- گزارش جدید: بدهی‌های معوق (به تفکیک ماه) ----
+ {id:'aged-debt',icon:'⏰',title:'بدهی‌های معوق',desc:'بدهی واحدها به تفکیک ماه جاری',filters:{},
+  build(f){const cm=B49.curJMonth();const rows=(B49.cache.units||[]).map(u=>{
+    const charges=(B49.cache.charges||[]).filter(c=>c.unit_id===u.id);
+    const payments=(B49.cache.payments||[]).filter(p=>p.unit_id===u.id);
+    const months=[...new Set(charges.map(c=>c.jmonth))].sort().reverse();
+    let curMonthDebt=0,prevDebt=0;
+    months.forEach((m,i)=>{
+      const due=charges.filter(c=>c.jmonth===m).reduce((s,c)=>s+Number(c.amount_due||0),0);
+      const paid=payments.filter(p=>p.jmonth===m).reduce((s,p)=>s+Number(p.amount||0),0);
+      if(m===cm)curMonthDebt=Math.max(0,due-paid);
+      else prevDebt+=Math.max(0,due-paid);
+    });
+    const total=B49.unitTotalDebt(u.id);
+    return {u:u.id,cur:curMonthDebt,prev:prevDebt,total};
+  }).filter(r=>r.total>0).sort((a,b)=>b.total-a.total);
+  return {columns:[{key:'u',label:'واحد',render:v=>B49.unitOpt(v)},B49.mc('cur','بدهی ماه جاری'),B49.mc('prev','بدهی ماه‌های قبل'),B49.mc('total','مجموع')],rows,summary:[{label:'تعداد بدهکار',value:B49.faDigits(rows.length)},{label:'مجموع بدهی جاری',value:B49.rial(rows.reduce((s,r)=>s+r.cur,0))},{label:'مجموع بدهی معوق',value:B49.rial(rows.reduce((s,r)=>s+r.prev,0))}]};}}
 ];
 B49.curReport=null;
 B49.yearOpts=()=>{const j=B49.jNow();let o='';for(let y=j.jy-3;y<=j.jy;y++)o+=`<option value="${y}" ${y===j.jy?'selected':''}>${B49.faDigits(y)}</option>`;return o;};
@@ -1311,11 +1512,14 @@ B49.routes.audit=async()=>{
 
 // ===================== راه‌اندازی =====================
 B49.boot=async()=>{
+  // اعمال تم ذخیره‌شده قبل از نمایش
+  const savedTheme=localStorage.getItem('b49_theme')||'dark';
+  document.documentElement.setAttribute('data-theme',savedTheme);
   window.addEventListener('hashchange',B49.route);
   // مدیریت نشست منقضی‌شده / خروج در تب دیگر: اگر نشست از بین رفت، به لندینگ برگرد.
   B49.sb.auth.onAuthStateChange((event)=>{
     if(event==='SIGNED_OUT'||event==='TOKEN_REFRESH_FAILED'){
-      B49.user=null;B49.profile=null;B49.cache={};
+      B49.user=null;B49.profile=null;B49.cache={};B49.guest=null;
       if(location.hash!=='')history.replaceState(null,'',location.pathname+location.search);
       B49.showLanding();
     }
