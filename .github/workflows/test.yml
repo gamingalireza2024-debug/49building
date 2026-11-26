@@ -66,12 +66,20 @@ jobs:
           done
 
           echo ""
-          echo "=== بررسی ADD CONSTRAINT IF NOT EXISTS (ممنوع) ==="
-          if grep -ri 'add constraint if not exists' schema.sql migration_v2.sql migration_v3.sql; then
-            echo "❌ ADD CONSTRAINT IF NOT EXISTS یافت شد — PostgreSQL پشتیبانی نمی‌کند"
+          echo "=== بررسی ADD CONSTRAINT IF NOT EXISTS (ممنوع در SQL واقعی) ==="
+          FOUND=0
+          for f in schema.sql migration_v2.sql migration_v3.sql; do
+            MATCHES=$(grep -v '^\s*--' "$f" | grep -ci 'add constraint if not exists' || true)
+            if [ "$MATCHES" -gt 0 ]; then
+              echo "❌ $f: ADD CONSTRAINT IF NOT EXISTS در خط غیر کامنت یافت شد:"
+              grep -v '^\s*--' "$f" | grep -ni 'add constraint if not exists'
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -ne 0 ]; then
             exit 1
           fi
-          echo "✅ هیچ ADD CONSTRAINT IF NOT EXISTS نیست"
+          echo "✅ هیچ ADD CONSTRAINT IF NOT EXISTS در خطوط غیر کامنت نیست"
 
           echo ""
           echo "=== بررسی create policy تکراری بدون drop ==="
