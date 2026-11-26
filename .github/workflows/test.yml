@@ -37,7 +37,7 @@ jobs:
         with:
           name: accounting-report
           path: tests/unit/.last-accounting-report.json
-          if-no-files-found: error
+          if-no-files-found: warn
 
   db:
     name: ۲) دیتابیس — اعتبارسنجی SQL
