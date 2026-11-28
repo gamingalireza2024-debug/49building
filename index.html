@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ساختمان ۴۹ — مرکز فرماندهی مالی</title>
+<title>ساختمان ۴۹ — سامانه مدیریت مالی</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230B1018%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-family=%27Vazirmatn,Arial%27 font-size=%2717%27 font-weight=%27bold%27 fill=%27%23C8A96B%27 text-anchor=%27middle%27%3E%D9%A1%D9%A9%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,7 @@
 <script src="b49_accounting.js"></script>
 <style>
 /* ===========================================================
-   ساختمان ۴۹ — FINANCIAL COMMAND CENTER
+   ساختمان ۴۹ — FINANCIAL MANAGEMENT SYSTEM
    Design system: premium dark fintech, champagne-gold accent,
    two independent funds (monthly blue / construction gold),
    RTL Persian, day/night themes with strong contrast.
@@ -448,7 +448,7 @@ table.tbl .td-unit{font-weight:600}
     <img src="assets/facade.jpg" alt="نمای ساختمان ۴۹" onerror="this.style.display='none'">
     <div class="login-art-inner">
       <div class="mark"><div class="mono lg">۴۹</div></div>
-      <h1>مرکز فرماندهی مالی ساختمان ۴۹</h1>
+      <h1>سامانه مدیریت مالی ساختمان ۴۹</h1>
       <p>سامانه‌ی یکپارچه‌ی مدیریت مالی، صندوق‌های ماهانه و عمرانی، گردش حساب واحدها و گزارش‌های تحلیلی — طراحی‌شده برای دقت، شفافیت و اعتماد.</p>
       <div class="stats">
         <div><b id="lg-units">—</b><span>واحد مسکونی</span></div>
@@ -459,7 +459,7 @@ table.tbl .td-unit{font-weight:600}
   </div>
   <div class="login-panel">
     <div class="login-card">
-      <div class="brand"><div class="mono">۴۹</div><div><div class="bt">ساختمان ۴۹</div><div class="bs">FINANCIAL COMMAND CENTER</div></div></div>
+      <div class="brand"><div class="mono">۴۹</div><div><div class="bt">ساختمان ۴۹</div><div class="bs">FINANCIAL MANAGEMENT SYSTEM</div></div></div>
       <h2 id="login-title">ورود به حساب</h2>
       <p class="lead" id="login-lead">با ایمیل و گذرواژه‌ی حساب مدیریت وارد شوید.</p>
       <div class="err-box" id="login-err"></div>
@@ -480,7 +480,7 @@ table.tbl .td-unit{font-weight:600}
   <aside class="sidebar" id="sidebar">
     <div class="sb-head">
       <div class="mono">۴۹</div>
-      <div><div class="bt">ساختمان ۴۹</div><div class="bs">FINANCIAL COMMAND CENTER</div></div>
+      <div><div class="bt">ساختمان ۴۹</div><div class="bs">FINANCIAL MANAGEMENT SYSTEM</div></div>
     </div>
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot">
@@ -535,7 +535,7 @@ table.tbl .td-unit{font-weight:600}
 
 <script>
 /* =====================================================================
-   ساختمان ۴۹ — FINANCIAL COMMAND CENTER  (application core)
+   ساختمان ۴۹ — FINANCIAL MANAGEMENT SYSTEM  (application core)
    - Supabase config/auth/RPC preserved from existing app (same project).
    - ALL financial math delegated to B49Acc (authoritative shared layer).
    - No financial totals computed independently in UI components.
@@ -1256,6 +1256,55 @@ B49.jmSelect = (prefix, jm) => { const [y,m]=String(jm||'').split('/').map(s=>s?
 };
 B49.jmVal = (prefix) => { const y=$('#'+prefix+'-y').value, m=$('#'+prefix+'-m').value; return `${y}/${String(m).padStart(2,'0')}`; };
 B49.todayISO = () => new Date().toISOString().slice(0,10);
+/* ---- Persian (Jalali) date picker + money mask (ریال، ارقام فارسی، جداکننده‌ی سه‌رقمی) ---- */
+(function(){if(document.getElementById('b49xcss'))return;const s=document.createElement('style');s.id='b49xcss';s.textContent=`
+.jdate-wrap,.money-wrap{position:relative;display:flex;align-items:center}
+.jdate-in,.money-in{width:100%;height:42px;padding:0 44px 0 13px;border-radius:var(--r-sm);background:var(--bg-2);border:1px solid var(--border);color:var(--text);font-variant-numeric:tabular-nums}
+.jdate-in{cursor:pointer}.jdate-in:focus,.money-in:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+.jdate-btn{position:absolute;inset-inline-end:0;top:0;height:42px;width:42px;display:grid;place-items:center;color:var(--muted);background:transparent;border-radius:0 var(--r-sm) var(--r-sm) 0}
+.money-suf{position:absolute;inset-inline-end:12px;font-size:12px;color:var(--muted);pointer-events:none}
+.jdp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.jdp-head .jh-mid{text-align:center;font-weight:700;font-size:14px}
+.jdp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.jdp-wd{text-align:center;font-size:11px;color:var(--muted);font-weight:700;padding:6px 0}
+.jdp-d{height:36px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12.5px;font-variant-numeric:tabular-nums;transition:background .12s}
+.jdp-d:hover:not(.empty){background:var(--surface-2)}
+.jdp-d.sel{background:var(--gold);color:#1a140a;border-color:transparent;font-weight:700}
+.jdp-d.empty{visibility:hidden}
+.wz-amt-wrap{position:relative;display:inline-block}
+.wz-amt{width:160px;height:34px;border-radius:7px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);padding:0 34px 0 8px;font-variant-numeric:tabular-nums;text-align:left;direction:ltr}
+.wz-amt:focus{outline:none;border-color:var(--gold)}
+.wz-amt-suf{position:absolute;inset-inline-end:6px;font-size:10px;color:var(--muted);top:50%;transform:translateY(-50%)}
+.wz-setall{display:flex;gap:8px;align-items:center;margin:10px 0;padding:10px 12px;background:var(--bg-2);border:1px dashed var(--border);border-radius:var(--r-sm)}
+.wz-setall .wz-amt{width:140px;height:32px}
+`;document.head.appendChild(s);})();
+B49.WD=['ش','ی','د','س','چ','پ','ج'];
+B49.fmtMoneyInput = (v) => { const n=B49.numOr(v,0); return n?B49.faDigits(n.toLocaleString('en-US')):''; };
+B49.maskMoney = (el) => {
+  let raw=B49.toEn(String(el.value).replace(/[^\d۰-۹]/g,'')).replace(/^0+(?=\d)/,'');
+  el.dataset.raw=raw; el.value = raw?B49.faDigits(Number(raw).toLocaleString('en-US')):'';
+  try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){}
+};
+B49.moneyVal = (x) => { const el=typeof x==='string'?$('#'+x):x; return B49.numOr(el&&(el.dataset.raw!=null?el.dataset.raw:el.value),0); };
+B49.moneyField = (id,val,ph) => `<div class="money-wrap"><input id="${id}" class="money-in" type="text" inputmode="numeric" dir="ltr" value="${B49.fmtMoneyInput(val)}" data-raw="${B49.numOr(val,0)}" placeholder="${ph||'۰'}" oninput="B49.maskMoney(this)"><span class="money-suf">ریال</span></div>`;
+B49.jdateField = (id,iso) => `<div class="jdate-wrap"><input id="${id}" class="jdate-in" type="text" readonly dir="ltr" value="${iso?B49.fmtDate(iso):''}" data-iso="${iso||''}" placeholder="انتخاب تاریخ"><button type="button" class="jdate-btn" onclick="B49.openJalali('${id}')">${svg(IC.calendar)}</button></div>`;
+B49.jdateVal = (id) => { const el=$('#'+id); return el?(el.dataset.iso||''):''; };
+B49.openJalali = (id) => {
+  const inp=$('#'+id); let iso=inp?inp.dataset.iso:''; let j;
+  if(iso){const[gy,gm,gd]=iso.split('-').map(Number);const r=jalaali.toJalaali(gy,gm,gd);j={jy:r.jy,jm:r.jm,jd:r.jd};}
+  else{const d=new Date();const r=jalaali.toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());j={jy:r.jy,jm:r.jm,jd:r.jd};}
+  B49._jdp={id,jy:j.jy,jm:j.jm,jd:j.jd}; B49.jdpDraw();
+};
+B49.jdpNav=(d)=>{const s=B49._jdp;s.jm+=d;if(s.jm<1){s.jm=12;s.jy--;}if(s.jm>12){s.jm=1;s.jy++;}B49.jdpDraw();};
+B49.jdpToday=()=>{const d=new Date();const r=jalaali.toJalaali(d.getFullYear(),d.getMonth()+1,d.getDate());B49._jdp={id:(B49._jdp&&B49._jdp.id),jy:r.jy,jm:r.jm,jd:r.jd};B49.jdpDraw();};
+B49.jdpDraw=()=>{
+  const s=B49._jdp;const len=jalaali.jalaaliMonthLength(s.jy,s.jm);
+  const g1=jalaali.toGregorian(s.jy,s.jm,1);const wd=new Date(g1.gy,g1.gm-1,g1.gd).getDay();const lead=(wd+1)%7;
+  const cells=[];for(let i=0;i<lead;i++)cells.push(null);for(let d=1;d<=len;d++)cells.push(d);while(cells.length%7)cells.push(null);
+  const grid=cells.map(c=>c==null?`<div class="jdp-d empty"></div>`:`<button type="button" class="jdp-d ${c===s.jd?'sel':''}" onclick="B49.jdpPick(${c})">${B49.faDigits(c)}</button>`).join('');
+  B49.openModal('انتخاب تاریخ شمسی', `<div class="jdp"><div class="jdp-head"><button class="tb-btn" onclick="B49.jdpNav(-1)" style="transform:scaleX(-1)">${svg(IC.chev,'')}</button><div class="jh-mid">${B49.jMonthLabel(s.jm)} ${B49.faDigits(s.jy)}</div><button class="tb-btn" onclick="B49.jdpNav(1)">${svg(IC.chev,'')}</button></div><div class="jdp-grid">${B49.WD.map(w=>`<div class="jdp-wd">${w}</div>`).join('')}${grid}</div><div class="row" style="justify-content:space-between;margin-top:12px"><button class="btn sm ghost" onclick="B49.jdpToday()">امروز</button><button class="btn sm ghost" onclick="B49.closeModal()">انصراف</button></div></div>`,'',false);
+};
+B49.jdpPick=(jd)=>{const s=B49._jdp;const g=jalaali.toGregorian(s.jy,s.jm,jd);const iso=`${g.gy}-${String(g.gm).padStart(2,'0')}-${String(g.gd).padStart(2,'0')}`;const el=$('#'+s.id);if(el){el.dataset.iso=iso;el.value=B49.fmtDate(iso);}B49.closeModal();};
 
 /* ---- payment form ---- */
 B49.paymentForm = async (id) => {
@@ -1263,10 +1312,10 @@ B49.paymentForm = async (id) => {
   const row = id? B49.cache.payments.find(p=>p.id===id) : null;
   const body = `
     ${B49.fld('واحد', `<select id="pf-unit" style="width:100%;height:42px">${B49.unitOptions(row?row.unit_id:B49.cache.units[0]?.id)}</select>`)}
-    <div class="grid-2">${B49.fld('مبلغ (ریال)', `<input id="pf-amount" type="number" min="1" value="${row?row.amount:''}" placeholder="مثلاً 500000">`)}
+    <div class="grid-2">${B49.fld('مبلغ', B49.moneyField('pf-amount', row?row.amount:0, '۱,۵۰۰,۰۰۰'))}
     ${B49.fld('صندوق', `<select id="pf-type" style="width:100%;height:42px" onchange="B49.toggleProj('pf')"><option value="monthly" ${(row?row.type:'monthly')==='monthly'?'selected':''}>ماهانه</option><option value="construction" ${row?(row.type==='construction'?'selected':''):''}>عمرانی</option></select>`)}</div>
     ${B49.fld('دوره‌ی حسابداری (jmonth)', B49.jmSelect('pf', row?row.jmonth:null), 'شارژ متعلق به این دوره است، نه تاریخ درج.')}
-    <div class="grid-2">${B49.fld('تاریخ پرداخت', `<input id="pf-date" type="date" value="${row?(row.payment_date||'').slice(0,10):B49.todayISO()}">`)}
+    <div class="grid-2">${B49.fld('تاریخ پرداخت', B49.jdateField('pf-date', row?(row.payment_date||'').slice(0,10):B49.todayISO()))}
     ${B49.fld('روش پرداخت', `<select id="pf-method" style="width:100%;height:42px">${['card','bank','cash'].map(m=>`<option value="${m}" ${(row?row.method:'card')===m?'selected':''}>${({card:'کارت',bank:'بانک',cash:'نقد'})[m]}</option>`).join('')}</select>`)}</div>
     ${B49.fld('پروژه (فقط عمرانی)', `<select id="pf-project" style="width:100%;height:42px">${B49.projectOptions(row?row.project_id:null)}</select>`)}
     ${B49.fld('یادداشت', `<input id="pf-note" type="text" value="${row?row.note||'':''}" placeholder="اختیاری">`)}`;
@@ -1274,8 +1323,8 @@ B49.paymentForm = async (id) => {
     `<button class="btn ghost" onclick="B49.closeModal()">انصراف</button><button class="btn primary" id="pf-ok">${row?'ذخیره':'ثبت'}</button>`, true);
   B49.toggleProj('pf');
   $('#pf-ok').onclick=async()=>{
-    const o={ unit_id:+$('#pf-unit').value, amount:+$('#pf-amount').value, type:$('#pf-type').value, jmonth:B49.jmVal('pf'),
-      payment_date:$('#pf-date').value, method:$('#pf-method').value, project_id:$('#pf-project').value||null, note:$('#pf-note').value||null };
+    const o={ unit_id:+$('#pf-unit').value, amount:B49.moneyVal('pf-amount'), type:$('#pf-type').value, jmonth:B49.jmVal('pf'),
+      payment_date:B49.jdateVal('pf-date'), method:$('#pf-method').value, project_id:$('#pf-project').value||null, note:$('#pf-note').value||null };
     if(!o.amount||o.amount<=0){ B49.toast('مبلغ نامعتبر.','err'); return; }
     if(o.type==='monthly'&&o.project_id){ B49.toast('پرداخت ماهانه نباید پروژه داشته باشد.','err'); return; }
     $('#pf-ok').disabled=true;
@@ -1294,10 +1343,10 @@ B49.expenseForm = async (id) => {
   const row = id? B49.cache.expenses.find(e=>e.id===id) : null;
   const body = `
     ${B49.fld('عنوان هزینه', `<input id="ef-title" type="text" value="${row?row.title||'':''}" placeholder="مثلاً حقوق نگهبان">`)}
-    <div class="grid-2">${B49.fld('مبلغ (ریال)', `<input id="ef-amount" type="number" min="1" value="${row?row.amount:''}">`)}
+    <div class="grid-2">${B49.fld('مبلغ', B49.moneyField('ef-amount', row?row.amount:0, '۱,۵۰۰,۰۰۰'))}
     ${B49.fld('صندوق', `<select id="ef-fund" style="width:100%;height:42px" onchange="B49.toggleProj('ef')"><option value="monthly" ${(row?(row.fund||row.type):'monthly')==='monthly'?'selected':''}>ماهانه</option><option value="construction" ${row?(row.fund||row.type)==='construction'?'selected':'':''}>عمرانی</option></select>`)}</div>
     ${B49.fld('دسته‌ی هزینه', `<select id="ef-cat" style="width:100%;height:42px">${B49.catOptions(row?row.category_id:null)}</select>`)}
-    <div class="grid-2">${B49.fld('تاریخ هزینه', `<input id="ef-date" type="date" value="${row?(row.expense_date||'').slice(0,10):B49.todayISO()}">`)}
+    <div class="grid-2">${B49.fld('تاریخ هزینه', B49.jdateField('ef-date', row?(row.expense_date||'').slice(0,10):B49.todayISO()))}
     ${B49.fld('روش پرداخت', `<select id="ef-method" style="width:100%;height:42px">${['bank','cash','card'].map(m=>`<option value="${m}" ${(row?row.payment_type:'bank')===m?'selected':''}>${({bank:'بانک',cash:'نقد',card:'کارت'})[m]}</option>`).join('')}</select>`)}</div>
     ${B49.fld('پروژه (فقط عمرانی)', `<select id="ef-project" style="width:100%;height:42px">${B49.projectOptions(row?row.project_id:null)}</select>`)}
     ${B49.fld('شرح', `<textarea id="ef-desc" rows="2">${row?row.description||'':''}</textarea>`)}
@@ -1306,8 +1355,8 @@ B49.expenseForm = async (id) => {
     `<button class="btn ghost" onclick="B49.closeModal()">انصراف</button><button class="btn primary" id="ef-ok">${row?'ذخیره':'ثبت'}</button>`, true);
   B49.toggleProj('ef');
   $('#ef-ok').onclick=async()=>{
-    const o={ title:$('#ef-title').value.trim(), amount:+$('#ef-amount').value, fund:$('#ef-fund').value, category_id:$('#ef-cat').value||null,
-      expense_date:$('#ef-date').value, payment_type:$('#ef-method').value, project_id:$('#ef-project').value||null, description:$('#ef-desc').value.trim()||null, jmonth:B49.jmVal('ef') };
+    const o={ title:$('#ef-title').value.trim(), amount:B49.moneyVal('ef-amount'), fund:$('#ef-fund').value, category_id:$('#ef-cat').value||null,
+      expense_date:B49.jdateVal('ef-date'), payment_type:$('#ef-method').value, project_id:$('#ef-project').value||null, description:$('#ef-desc').value.trim()||null, jmonth:B49.jmVal('ef') };
     if(!o.title){ B49.toast('عنوان الزامی است.','err'); return; } if(!o.amount||o.amount<=0){ B49.toast('مبلغ نامعتبر.','err'); return; }
     if(o.fund==='monthly'&&o.project_id){ B49.toast('هزینه ماهانه نباید پروژه داشته باشد.','err'); return; }
     $('#ef-ok').disabled=true; const reason=row?'ویرایش از پنل':'ثبت از پنل';
@@ -1324,14 +1373,14 @@ B49.priorDebtForm = async (id) => {
   const row = id? B49.cache.prior.find(d=>d.id===id) : null;
   const body = `
     ${B49.fld('واحد', `<select id="pd-unit" style="width:100%;height:42px">${B49.unitOptions(row?row.unit_id:B49.cache.units[0]?.id)}</select>`)}
-    <div class="grid-2">${B49.fld('بدهی اولیه‌ی ماهانه', `<input id="pd-mi" type="number" value="${row?row.monthly_initial||0:0}">`)}${B49.fld('بدهی اولیه‌ی عمرانی', `<input id="pd-ci" type="number" value="${row?row.construction_initial||0:0}">`)}</div>
-    <div class="grid-2">${B49.fld('اعتبار ماهانه', `<input id="pd-cm" type="number" value="${row?row.credit_monthly||0:0}">`)}${B49.fld('اعتبار عمرانی', `<input id="pd-cc" type="number" value="${row?row.credit_construction||0:0}">`)}</div>
-    ${B49.fld('تاریخ اعتبار', `<input id="pd-date" type="date" value="${row?(row.as_of_date||'').slice(0,10):B49.todayISO()}">`)}
+    <div class="grid-2">${B49.fld('بدهی اولیه‌ی ماهانه', B49.moneyField('pd-mi', row?row.monthly_initial:0))}${B49.fld('بدهی اولیه‌ی عمرانی', B49.moneyField('pd-ci', row?row.construction_initial:0))}</div>
+    <div class="grid-2">${B49.fld('اعتبار ماهانه', B49.moneyField('pd-cm', row?row.credit_monthly:0))}${B49.fld('اعتبار عمرانی', B49.moneyField('pd-cc', row?row.credit_construction:0))}</div>
+    ${B49.fld('تاریخ اعتبار', B49.jdateField('pd-date', row?(row.as_of_date||'').slice(0,10):B49.todayISO()))}
     ${B49.fld('یادداشت', `<input id="pd-note" type="text" value="${row?row.note||'':''}">`)}`;
   B49.openModal(row?'ویرایش مانده افتتاحیه':'ثبت مانده افتتاحیه', body,
     `<button class="btn ghost" onclick="B49.closeModal()">انصراف</button>${row?`<button class="btn danger" onclick="B49.priorDebtDelete(${row.unit_id})">حذف</button>`:''}<button class="btn primary" id="pd-ok">${row?'ذخیره':'ثبت'}</button>`, true);
   $('#pd-ok').onclick=async()=>{
-    const o={ unit_id:+$('#pd-unit').value, monthly_initial:+$('#pd-mi').value||0, construction_initial:+$('#pd-ci').value||0, credit_monthly:+$('#pd-cm').value||0, credit_construction:+$('#pd-cc').value||0, as_of_date:$('#pd-date').value, note:$('#pd-note').value||null };
+    const o={ unit_id:+$('#pd-unit').value, monthly_initial:B49.moneyVal('pd-mi')||0, construction_initial:B49.moneyVal('pd-ci')||0, credit_monthly:B49.moneyVal('pd-cm')||0, credit_construction:B49.moneyVal('pd-cc')||0, as_of_date:B49.jdateVal('pd-date'), note:$('#pd-note').value||null };
     $('#pd-ok').disabled=true; const reason=row?'ویرایش از پنل':'ثبت از پنل';
     const res=await B49.api.rpc('save_prior_debt',{p_unit_id:o.unit_id,p_monthly_initial:o.monthly_initial,p_construction_initial:o.construction_initial,p_credit_monthly:o.credit_monthly,p_credit_construction:o.credit_construction,p_as_of_date:o.as_of_date,p_note:o.note,p_reason:reason});
     if(res!==null){ B49.closeModal(); B49.toast('مانده افتتاحیه ذخیره شد.','ok'); await B49.loadCache(); B49.reroute(); }
@@ -1358,7 +1407,7 @@ B49.PAGES.units = function(c){
   rows.sort((a,b)=>b.debt-a.debt);
   c.innerHTML = `
     <div class="page-head"><div><h2>واحدها و ساکنین</h2><p>${B49.faDigits(cache.units.length)} واحد مسکونی — پرونده‌ی مالی هر واحد با حساب‌های مستقل ماهانه و عمرانی.</p></div>
-      <div class="actions"><div class="tb-search" style="position:relative"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="uf-search" type="search" placeholder="جستجوی واحد یا مالک…" value="${q}"></div></div></div>
+      <div class="actions">${B49.isAdmin()?`<button class="btn primary" onclick="B49.unitForm()">${svg(IC.plus)}افزودن واحد</button>`:''}<div class="tb-search" style="position:relative"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="uf-search" type="search" placeholder="جستجوی واحد یا مالک…" value="${q}"></div></div></div>
     <div class="card"><div id="units-list"></div></div>`;
   $('#uf-search').oninput=e=>{ const ql=e.target.value.toLowerCase(); const f=rows.filter(r=>String(r.u.number).includes(ql)||(r.o&&r.o.name.toLowerCase().includes(ql))); B49.renderUnitList(f); };
   B49.renderUnitList(rows);
@@ -1373,8 +1422,47 @@ B49.renderUnitList = (rows) => {
       <div class="ur-main"><div class="ur-name">واحد ${B49.faDigits(r.u.number)}${r.o?' · '+r.o.name:''}</div>
         <div class="ur-sub">طبقه ${B49.faDigits(r.u.floor||0)} · ${B49.faDigits(r.u.area||0)} متر²${r.t?' · مستاجر: '+r.t.name:' · بدون مستاجر'}</div></div>
       <div class="ur-amt">${B49.fmt(r.debt,true)}<small>${B49.badge(lbl,cls)}</small></div>
+      ${B49.isAdmin()?`<div class="row" style="gap:2px;flex:0 0 auto" onclick="event.stopPropagation()"><button class="tb-btn" style="width:30px;height:30px" onclick="B49.unitForm(${r.u.id})" title="ویرایش واحد و ساکنین">${svg(IC.edit)}</button><button class="tb-btn" style="width:30px;height:30px" onclick="B49.unitDelete(${r.u.id})" title="حذف واحد">${svg(IC.trash)}</button></div>`:''}
     </div>`;
   }).join('');
+};
+B49.unitForm = async (id) => {
+  if(!B49.isAdmin()){ B49.toast('فقط مدیر می‌تواند واحد ثبت/ویرایش کند.','err'); return; }
+  const u = id? B49.cache.byUnit[id] : null;
+  const o = id? B49.cache.ownerByUnit[id] : null;
+  const t = id? B49.cache.tenantByUnit[id] : null;
+  const body = `
+    <div class="grid-2">${B49.fld('شماره واحد', `<input id="uf-num" type="text" value="${u?u.number||'':''}" placeholder="مثلاً ۱۰۱">`)}${B49.fld('طبقه', `<input id="uf-floor" type="text" inputmode="numeric" value="${u?u.floor||'':''}" placeholder="مثلاً ۱">`)}</div>
+    ${B49.fld('متراژ (متر مربع)', `<input id="uf-area" type="text" inputmode="decimal" value="${u?u.area||'':''}" placeholder="مثلاً ۱۲۰">`)}
+    <div style="margin:16px 0 8px;font-weight:700;font-size:13.5px;color:var(--text-2)">مالک</div>
+    ${B49.fld('نام مالک', `<input id="uf-oname" type="text" value="${o?o.name||'':''}" placeholder="نام و نام خانوادگی">`)}
+    <div class="grid-2">${B49.fld('کد ملی', `<input id="uf-oid" type="text" inputmode="numeric" value="${o?o.national_code||'':''}">`)}${B49.fld('تلفن', `<input id="uf-ophone" type="text" value="${o?o.phone||'':''}">`)}</div>
+    <div style="margin:16px 0 8px;font-weight:700;font-size:13.5px;color:var(--text-2)">مستاجر ${t?'':'(خالی‌گذاشتن نام = بدون مستاجر)'}</div>
+    ${B49.fld('نام مستاجر', `<input id="uf-tname" type="text" value="${t?t.name||'':''}" placeholder="خالی = بدون مستاجر">`)}
+    <div class="grid-2">${B49.fld('تلفن مستاجر', `<input id="uf-tphone" type="text" value="${t?t.phone||'':''}">`)}${B49.fld('شروع اجاره', B49.jdateField('uf-tls', t?(t.lease_start||'').slice(0,10):''))}</div>
+    ${B49.fld('پایان اجاره', B49.jdateField('uf-tle', t?(t.lease_end||'').slice(0,10):''))}`;
+  B49.openModal(u?'ویرایش واحد و ساکنین':'افزودن واحد', body, `<button class="btn ghost" onclick="B49.closeModal()">انصراف</button>${u?`<button class="btn danger" onclick="B49.unitDelete(${u.id})">${svg(IC.trash)}حذف واحد</button>`:''}<button class="btn primary" id="uf-ok">${u?'ذخیره':'ثبت'}</button>`, true);
+  $('#uf-ok').onclick=async()=>{
+    const num=$('#uf-num').value.trim(); if(!num){ B49.toast('شماره واحد الزامی است.','err'); return; }
+    const oname=$('#uf-oname').value.trim(); if(!oname){ B49.toast('نام مالک الزامی است.','err'); return; }
+    const p_unit={ number:num, floor:$('#uf-floor').value.trim(), area:$('#uf-area').value.trim() }; if(u) p_unit.id=u.id;
+    const p_owner={ name:oname, national_code:$('#uf-oid').value.trim(), phone:$('#uf-ophone').value.trim(), email:'' };
+    const tname=$('#uf-tname').value.trim();
+    const p_tenant = tname ? { name:tname, phone:$('#uf-tphone').value.trim(), lease_start:B49.jdateVal('uf-tls'), lease_end:B49.jdateVal('uf-tle') } : null;
+    const remove = !!(t && !tname);
+    $('#uf-ok').disabled=true;
+    const res=await B49.api.rpc('save_unit_owner_tenant',{p_unit,p_owner,p_tenant,p_tenant_remove:remove});
+    if(res!==null){ B49.closeModal(); B49.toast(u?'واحد ذخیره شد.':'واحد افزوده شد.','ok'); await B49.loadCache(); B49.reroute(); }
+    else $('#uf-ok').disabled=false;
+  };
+};
+B49.unitDelete = (id) => {
+  const u=B49.cache.byUnit[id]; if(!u) return;
+  B49.closeModal();
+  B49.openModal('حذف واحد', `<p style="margin:0 0 12px;color:var(--text-2);font-size:13px">حذف واحد ${B49.faDigits(u.number)} و تمام داده‌های وابسته (شارژها، پرداخت‌ها، مانده). قابل بازگشت نیست.</p><div class="field" style="margin:0"><label>دلیل (الزامی)</label><input id="uf-del-reason" type="text"></div>`,
+    `<button class="btn ghost" onclick="B49.closeModal()">انصراف</button><button class="btn danger" id="uf-del-ok">حذف قطعی</button>`);
+  $('#uf-del-ok').onclick=async()=>{ const r=$('#uf-del-reason').value.trim(); if(!r){B49.toast('دلیل الزامی است.','err');return;} $('#uf-del-ok').disabled=true;
+    const res=await B49.api.rpc('delete_unit',{p_id:id,p_reason:r}); if(res!==null&&res!==false){ B49.closeModal(); B49.toast('واحد حذف شد.','ok'); await B49.loadCache(); B49.go('units'); } else $('#uf-del-ok').disabled=false; };
 };
 
 /* =============== UNIT FINANCIAL PROFILE =============== */
@@ -1449,7 +1537,7 @@ B49.unitStatement = (uid,type) => {
 };
 
 /* =============== CHARGE ISSUANCE WIZARD =============== */
-B49._wiz = { step:1, fund:'monthly', dist:'equal', amount:0, sel:'all', picked:new Set(), excluded:new Set(), custom:{} };
+B49._wiz = { step:1, fund:'monthly', dist:'custom', amount:0, sel:'all', picked:new Set(), excluded:new Set(), custom:{} };
 B49.PAGES['charge-wizard'] = function(c){
   if(!B49.cache){ c.innerHTML=B49.skeleton(4); B49.loadCache().then(()=>B49.PAGES['charge-wizard'].call(this,c)); return; }
   if(!B49.isAdmin()){ c.innerHTML=B49.empty('صدور شارژ فقط توسط مدیر ممکن است.'); return; }
@@ -1474,43 +1562,53 @@ B49.wizFoot = () => {
   if($('#wiz-next')) $('#wiz-next').onclick=B49.wizNext;
   if($('#wiz-go')) $('#wiz-go').onclick=B49.wizConfirm;
 };
-B49.wizNext = () => { const w=B49._wiz; if(w.step===5 && !B49._wizPreviewValid){ B49.toast('پیش‌نمایش آماده نیست.','err'); return; } w.step++; B49.wizRender(); };
+B49.wizNext = () => { const w=B49._wiz; B49.wizCollect(); if(w.step===4 && w.dist!=='custom' && (!w.amount||w.amount<=0)){ B49.toast('مبلغ کل را وارد کنید.','err'); return; } if(w.step===5 && !B49._wizPreviewValid){ B49.toast('پیش‌نمایش آماده نیست.','err'); return; } w.step++; B49.wizRender(); };
 B49.wizPrev = () => { if(B49._wiz.step>1){B49._wiz.step--;B49.wizRender();} };
 B49.wizStep1 = () => { const w=B49._wiz; return `<h3 style="margin:0 0 14px">انتخاب صندوق</h3>
   <div class="grid-2"><label class="proj-card" style="text-align:center"><input type="radio" name="w-fund" value="monthly" ${w.fund==='monthly'?'checked':''} onchange="B49._wiz.fund=this.value;B49.wizRender()"><div class="fh-dot" style="background:var(--monthly);margin:6px auto"></div><b>صندوق ماهانه</b><div class="sec" style="font-size:12px">شارج دوره‌ای نگهداری</div></label>
   <label class="proj-card" style="text-align:center"><input type="radio" name="w-fund" value="construction" ${w.fund==='construction'?'checked':''} onchange="B49._wiz.fund=this.value;B49.wizRender()"><div class="fh-dot" style="background:var(--construction);margin:6px auto"></div><b>صندوق عمرانی</b><div class="sec" style="font-size:12px">شارژ پروژه/عمرانی</div></label></div>`; };
 B49.wizStep2 = () => { const w=B49._wiz; const now=B49.jNow(); if(!w.jmonth) w.jmonth=`${now.y}/${String(now.m).padStart(2,'0')}`; return `<h3 style="margin:0 0 14px">دوره‌ی حسابداری</h3>${B49.fld('ماه شارژ (jmonth)', B49.jmSelect('wz', w.jmonth), 'شارژ متعلق به این دوره است.')}`; };
-B49.wizStep3 = () => { const w=B49._wiz; const opts=[['equal','توزیع مساوی','مبلغ کل به‌طور مساوی تقسیم می‌شود.'],['area','بر اساس متراژ','سهم هر واحد متناسب با مساحت.'],['custom','مبلغ اختصاصی','مبلغ هر واحد به‌صورت دستی.']]; return `<h3 style="margin:0 0 14px">روش توزیع</h3><div style="display:flex;flex-direction:column;gap:10px">${opts.map(o=>`<label class="unit-row" style="cursor:pointer"><input type="radio" name="w-dist" value="${o[0]}" ${w.dist===o[0]?'checked':''} onchange="B49._wiz.dist=this.value;B49.wizRender()"><div class="ur-main"><div class="ur-name">${o[1]}</div><div class="ur-sub">${o[2]}</div></div></label>`).join('')}</div>${w.dist!=='custom'?B49.fld(w.dist==='equal'?'مبلغ کل (ریال)':'مبلغ کل بر اساس متراژ (ریال)', `<input id="wz-amount" type="number" min="1" value="${w.amount||''}" oninput="B49._wiz.amount=+this.value">`):''}`; };
-B49.wizStep4 = () => { const w=B49._wiz; const units=B49.cache.units; return `<h3 style="margin:0 0 14px">انتخاب واحدها</h3>
-  <div class="chip-row" style="margin-bottom:12px">${['all','picked','excluded'].map(s=>`<button class="chip ${w.sel===s?'active':''}" onclick="B49._wiz.sel='${s}';B49.wizRender()">${({all:'همه واحدها',picked:'انتخابی',excluded:'همه به‌جز مستثنی‌ها'})[s]}</button>`).join('')}</div>
-  <div class="card" style="max-height:280px;overflow:auto"><div id="wz-units">${units.map(u=>{ const inPick=w.picked.has(u.id), inExc=w.excluded.has(u.id); return `<label class="unit-row" style="cursor:pointer"><input type="checkbox" data-uid="${u.id}" ${w.sel==='all'&&!inExc?'checked':w.sel==='picked'&&inPick?'checked':w.sel==='excluded'&&!inExc?'checked':''} onchange="B49.wizToggleUnit(${u.id},this.checked)"><div class="ur-num" style="width:38px;height:38px;font-size:13px">${B49.faDigits(u.number)}</div><div class="ur-main"><div class="ur-name">واحد ${B49.faDigits(u.number)}</div><div class="ur-sub">${B49.faDigits(u.area||0)} متر²</div></div></label>`; }).join('')}</div></div>`; };
-B49.wizToggleUnit = (id,checked) => { const w=B49._wiz; if(w.sel==='picked'){ checked?w.picked.add(id):w.picked.delete(id); } else if(w.sel==='excluded'){ checked?w.excluded.delete(id):w.excluded.add(id); } };
-B49.wizEligible = () => {
-  const w=B49._wiz, cache=B49.cache, jm=B49.jmVal('wz'); w.jmonth=jm;
-  let list = w.sel==='all'? cache.units.slice() : w.sel==='picked'? cache.units.filter(u=>w.picked.has(u.id)) : cache.units.filter(u=>!w.excluded.has(u.id));
-  // existing duplicate check
-  return list.map(u=>{ const dup=cache.charges.some(c=>c.unit_id===u.id&&c.jmonth===jm&&(c.type||'monthly')===w.fund); return {u, area:B49.numOr(u.area,0), dup}; });
+B49.wizStep3 = () => { const w=B49._wiz; const opts=[['custom','مبلغ اختصاصی هر واحد','مدیر مبلغ هر واحد را جداگانه وارد می‌کند (روش معمول هر ماه).'],['equal','توزیع مساوی','مبلغ کل به‌طور مساوی بین واحدها تقسیم می‌شود.'],['area','بر اساس متراژ','سهم هر واحد متناسب با مساحت.']]; return `<h3 style="margin:0 0 14px">روش توزیع</h3><div style="display:flex;flex-direction:column;gap:10px">${opts.map(o=>`<label class="unit-row" style="cursor:pointer"><input type="radio" name="w-dist" value="${o[0]}" ${w.dist===o[0]?'checked':''} onchange="B49._wiz.dist=this.value;B49.wizRender()"><div class="ur-main"><div class="ur-name">${o[1]}</div><div class="ur-sub">${o[2]}</div></div></label>`).join('')}</div>${w.dist!=='custom'?B49.fld('مبلغ کل', B49.moneyField('wz-amount', w.amount, '۱۰,۰۰۰,۰۰۰')):''}`; };
+B49.wizSelectedUnits = () => { const w=B49._wiz, cache=B49.cache; return w.sel==='picked'? cache.units.filter(u=>w.picked.has(u.id)) : cache.units.filter(u=>!w.excluded.has(u.id)); };
+B49.wizSumCustom = () => { let s=0; B49.wizSelectedUnits().forEach(u=>{ s+=B49.numOr(B49._wiz.custom[u.id],0); }); return s; };
+B49.wizSumUpdate = () => { const el=$('#wz-sum'); if(el) el.textContent=B49.fmt(B49.wizSumCustom(),true); };
+B49.maskWz = (el,uid) => { B49.maskMoney(el); B49._wiz.custom[uid]=B49.numOr(el.dataset.raw,0); B49.wizSumUpdate(); };
+B49.wizSetAll = () => { const amt=B49.moneyVal('wz-setall-in'); if(!amt){ B49.toast('ابتدا مبلغ را وارد کنید.','err'); return; } B49.wizSelectedUnits().forEach(u=>{ B49._wiz.custom[u.id]=amt; const inp=document.querySelector('.wz-amt[data-uid="'+u.id+'"]'); if(inp){ inp.dataset.raw=amt; inp.value=B49.fmtMoneyInput(amt); } }); B49.wizSumUpdate(); B49.toast('مبلغ روی همه‌ی انتخابی‌ها اعمال شد.','ok'); };
+B49.wizStep4 = () => { const w=B49._wiz; const custom=w.dist==='custom';
+  const row=(u)=>{ const inPick=w.picked.has(u.id), inExc=w.excluded.has(u.id); const checked=(w.sel==='picked')?inPick:!inExc;
+    return `<div class="unit-row" style="cursor:default;align-items:center"><input type="checkbox" data-uid="${u.id}" ${checked?'checked':''} onchange="B49.wizToggleUnit(${u.id},this.checked)" style="width:18px;height:18px;accent-color:var(--gold);flex:0 0 auto"><div class="ur-num" style="width:40px;height:40px;font-size:13px">${B49.faDigits(u.number)}</div><div class="ur-main"><div class="ur-name">واحد ${B49.faDigits(u.number)}</div><div class="ur-sub">${B49.faDigits(u.area||0)} متر²</div></div>${custom?`<div class="wz-amt-wrap"><input class="wz-amt" inputmode="numeric" dir="ltr" data-uid="${u.id}" value="${B49.fmtMoneyInput(w.custom[u.id]||0)}" data-raw="${B49.numOr(w.custom[u.id],0)}" placeholder="۰" oninput="B49.maskWz(this,${u.id})"><span class="wz-amt-suf">ریال</span></div>`:''}</div>`; };
+  return `<h3 style="margin:0 0 14px">${custom?'مبلغ شارژ هر واحد':'انتخاب واحدها'}</h3>
+  ${custom?`<div class="wz-setall"><span style="font-size:12.5px;color:var(--text-2)">اعمال یک مبلغ روی همه‌ی انتخابی‌ها:</span><div class="wz-amt-wrap"><input id="wz-setall-in" class="wz-amt" inputmode="numeric" dir="ltr" placeholder="۱۰,۰۰۰,۰۰۰" oninput="B49.maskMoney(this)"><span class="wz-amt-suf">ریال</span></div><button class="btn sm primary" onclick="B49.wizSetAll()">اعمال روی همه</button></div><div class="sec" style="font-size:12px;margin:8px 0">سپس در صورت نیاز مبلغ هر واحد را جداگانه اصلاح کنید.</div>`:''}
+  <div class="chip-row" style="margin-bottom:10px">${['all','picked'].map(s=>`<button class="chip ${w.sel===s?'active':''}" onclick="B49._wiz.sel='${s}';B49.wizRender()">${({all:'همه واحدها',picked:'انتخابی'})[s]}</button>`).join('')}</div>
+  <div class="card" style="max-height:340px;overflow:auto"><div id="wz-units">${B49.cache.units.map(row).join('')}</div></div>
+  ${custom?`<div style="margin-top:8px;font-size:13px;color:var(--text-2)">مجموع انتخابی: <b id="wz-sum" style="color:var(--gold)">${B49.fmt(B49.wizSumCustom(),true)}</b></div>`:''}`;
 };
+B49.wizToggleUnit = (id,checked) => { const w=B49._wiz; if(w.sel==='picked'){ checked?w.picked.add(id):w.picked.delete(id); } else { checked?w.excluded.delete(id):w.excluded.add(id); } };
+B49.wizCollect = () => { const w=B49._wiz; try{ if(w.step===2) w.jmonth=B49.jmVal('wz'); }catch(e){} try{ if(w.step===3 && w.dist!=='custom') w.amount=B49.moneyVal('wz-amount'); }catch(e){} if(w.step===4 && w.dist==='custom'){ B49.wizSelectedUnits().forEach(u=>{ const inp=document.querySelector('.wz-amt[data-uid="'+u.id+'"]'); if(inp) w.custom[u.id]=B49.numOr(inp.dataset.raw,0); }); } };
 B49.wizPreview = () => {
-  const w=B49._wiz, elig=B49.wizEligible(); const pending=elig.filter(e=>!e.dup);
+  const w=B49._wiz, cache=B49.cache, jm=w.jmonth||'';
+  const sel=B49.wizSelectedUnits();
+  const eligible=sel.map(u=>{ const dup=cache.charges.some(c=>c.unit_id===u.id&&String(c.jmonth)===String(jm)&&(c.type||'monthly')===w.fund); return {u, area:B49.numOr(u.area,0), dup}; });
+  const pending=eligible.filter(e=>!e.dup);
   let shares;
-  if(w.dist==='custom'){ shares=pending.map(e=>B49._wiz.custom[e.u.id]||0); }
+  if(w.dist==='custom'){ shares=pending.map(e=>B49.numOr(w.custom[e.u.id],0)); }
   else if(w.dist==='area'){ shares=B49.acc().distributeByArea(w.amount, pending); }
   else { shares=B49.acc().distributeEqual(w.amount, pending.length); }
-  const rows=pending.map((e,i)=>({u:e.u, area:e.area, share:shares[i]||0, dup:false}));
-  const dupRows=elig.filter(e=>e.dup).map(e=>({u:e.u, area:e.area, share:0, dup:true}));
-  const allRows=[...rows,...dupRows];
+  const withShare=pending.map((e,i)=>({u:e.u, area:e.area, share:shares[i]||0}));
+  const rows=withShare.filter(r=>r.share>0);
+  const zeros=withShare.filter(r=>r.share<=0);
+  const dupRows=eligible.filter(e=>e.dup).map(e=>({u:e.u, area:e.area}));
   const total=rows.reduce((s,r)=>s+r.share,0);
   B49._wizPreviewValid = rows.length>0 && total>0;
   B49._wizRows = rows.map(r=>({unit_id:r.u.id, amount_due:r.share}));
+  const rrow=(r,kind)=>`<tr><td class="td-unit">#${B49.faDigits(r.u.number)}</td><td>${B49.faDigits(r.area)} م²</td><td class="amt">${kind==='ok'?B49.fmt(r.share):'—'}</td><td>${kind==='dup'?B49.badge('تکراری','warn'):kind==='zero'?B49.badge('بدون مبلغ','neutral'):B49.badge('ثبت','success')}</td></tr>`;
   $('#wz-preview').innerHTML = `<div class="card" style="margin-bottom:12px"><div class="fund-rows">
-    <div class="fund-row"><span class="fr-l">واحدهای واجد شرایط</span><span class="fr-v">${B49.faDigits(rows.length)}</span></div>
-    <div class="fund-row"><span class="fr-l">ردیف‌های تکراری (skip)</span><span class="fr-v">${B49.faDigits(dupRows.length)}</span></div>
-    <div class="fund-row"><span class="fr-l">مجموع شارژ</span><span class="fr-v gold" style="color:var(--gold)">${B49.fmt(total)}</span></div>
-    <div class="fund-row"><span class="fr-l">تفاوت گردکردن</span><span class="fr-v">${B49.fmt(total-w.amount)}</span></div>
+    <div class="fund-row"><span class="fr-l">واحدهای دریافت‌کننده شارژ</span><span class="fr-v">${B49.faDigits(rows.length)}</span></div>
+    <div class="fund-row"><span class="fr-l">بدون مبلغ / تکراری</span><span class="fr-v">${B49.faDigits(zeros.length+dupRows.length)}</span></div>
+    <div class="fund-row"><span class="fr-l">مجموع شارژ</span><span class="fr-v" style="color:var(--gold);font-weight:800">${B49.fmt(total)}</span></div>
   </div></div>
-  <div class="tbl-scroll" style="max-height:240px"><table class="tbl"><thead><tr><th>واحد</th><th>متراژ</th><th class="amt">شارژ جدید</th><th>وضعیت</th></tr></thead><tbody>${
-    allRows.map(r=>`<tr><td class="td-unit">#${B49.faDigits(r.u.number)}</td><td>${B49.faDigits(r.area)} م²</td><td class="amt">${r.dup?'—':B49.fmt(r.share)}</td><td>${r.dup?B49.badge('تکراری','warn'):B49.badge('ثبت','success')}</td></tr>`).join('')
+  <div class="tbl-scroll" style="max-height:260px"><table class="tbl"><thead><tr><th>واحد</th><th>متراژ</th><th class="amt">شارژ</th><th>وضعیت</th></tr></thead><tbody>${
+    rows.map(r=>rrow(r,'ok')).join('')+zeros.map(r=>rrow(r,'zero')).join('')+dupRows.map(r=>rrow(r,'dup')).join('')
   }</tbody></table></div>`;
 };
 B49.wizStep5 = () => `<h3 style="margin:0 0 14px">پیش‌نمایش زنده</h3><div id="wz-preview">${B49.empty('در حال محاسبه…')}</div>`;
@@ -1524,8 +1622,8 @@ B49.wizStep6 = () => { const w=B49._wiz; const total=(B49._wizRows||[]).reduce((
 B49.wizConfirm = async () => {
   const w=B49._wiz; const rows=B49._wizRows; if(!rows||!rows.length){ B49.toast('ردیفی برای صدور نیست.','err'); return; }
   $('#wiz-go').disabled=true;
-  const res=await B49.api.rpc('bulk_charge',{p_jmonth:w.jmonth,p_type:w.fund,p_rows:JSON.stringify(rows),p_reason:'صدور گروهی از جادوگر'});
-  if(res!==null){ B49.closeModal(); B49.toast(`شارژ برای ${B49.faDigits(rows.length)} واحد صادر شد.`,'ok'); await B49.loadCache(); B49.go('transactions'); }
+  const res=await B49.api.rpc('bulk_charge',{p_jmonth:w.jmonth,p_type:w.fund,p_rows:rows,p_reason:'صدور گروهی از جادوگر'});
+  if(res!==null){ B49.closeModal(); const ins=Array.isArray(res)?res.filter(r=>!r.skipped).length:rows.length; B49.toast(`شارژ برای ${B49.faDigits(ins)} واحد صادر شد.`,'ok'); await B49.loadCache(); B49.go('transactions'); }
   else $('#wiz-go').disabled=false;
 };
 /* =============== MONTHLY FUND =============== */
@@ -1579,7 +1677,7 @@ B49.PAGES['construction-fund']=function(c){
 B49.projectCard = (p,cache) => {
   const proj=cache.projects.find(x=>x.name===p.name)||{};
   return `<div class="proj-card" data-name="${p.name}">
-    <div class="pc-head"><div class="pc-name">${p.name}</div>${B49.badge(({open:'باز',in_progress:'در اجرا',done:'تکمیل',cancelled:'لغو'})[proj.status]||'باز','neutral')}</div>
+    <div class="pc-head"><div class="pc-name">${p.name}</div><div class="row" style="gap:6px">${B49.badge(({open:'باز',in_progress:'در اجرا',done:'تکمیل',cancelled:'لغو'})[proj.status]||'باز','neutral')}${B49.isAdmin()?`<button class="tb-btn" style="width:28px;height:28px" onclick="event.stopPropagation();B49.projectForm(${proj.id})" title="ویرایش پروژه">${svg(IC.edit)}</button>`:''}</div></div>
     <div class="pc-body">
       <div class="pc-stat"><div class="s-l">بودجه مصوب</div><div class="s-v">${B49.fmt(p.budget,true)}</div></div>
       <div class="pc-stat"><div class="s-l">شارژ صادرشده</div><div class="s-v">${B49.fmt(p.issued,true)}</div></div>
@@ -1595,7 +1693,7 @@ B49.projectCard = (p,cache) => {
 B49.projectDetail = (p) => {
   if(!p) return; const proj=B49.cache.projects.find(x=>x.name===p.name)||{};
   const rows=[['نام',p.name],['وضعیت',({open:'باز',in_progress:'در اجرا',done:'تکمیل',cancelled:'لغو'})[proj.status]||'باز'],['بودجه مصوب',B49.fmt(p.budget)],['شارژ صادرشده',B49.fmt(p.issued)],['وصول شده',B49.fmt(p.collected)],['باقی مطالبات',B49.fmt(p.remaining)],['اعتبار مازاد',B49.fmt(p.credit)],['هزینه‌ی اجرا',B49.fmt(p.exp)],['مانده‌ی نقدی',B49.fmt(p.cash)],['پیشرفت وصول',B49.fmtPct(p.collection_progress)],['پیشرفت اجرا',B49.fmtPct(p.execution_progress)]];
-  B49.openDrawer('پروژه‌ی '+p.name, `<div class="card-pad"><div style="display:flex;flex-direction:column">${rows.map(r=>`<div class="fund-row"><span class="fr-l">${r[0]}</span><span class="fr-v">${r[1]}</span></div>`).join('')}</div></div>`);
+  B49.openDrawer('پروژه‌ی '+p.name, `<div class="card-pad"><div style="display:flex;flex-direction:column">${rows.map(r=>`<div class="fund-row"><span class="fr-l">${r[0]}</span><span class="fr-v">${r[1]}</span></div>`).join('')}</div></div>`, B49.isAdmin()?`<button class="btn primary" onclick="B49.projectForm(${proj.id})">${svg(IC.edit)}ویرایش پروژه</button>`:'');
 };
 B49.fundTrendChart = (id, fund, income) => {
   const cache=B49.cache, now=B49.jNow(); const months=[]; let y=now.y,m=now.m;
@@ -1617,12 +1715,13 @@ B49.projectForm = async (id) => {
   if(!B49.isAdmin()){B49.toast('فقط مدیر.','err');return;}
   const row=id?B49.cache.projects.find(p=>p.id===id):null;
   const body=`${B49.fld('نام پروژه',`<input id="pf-name" type="text" value="${row?row.name||'':''}">`)}
-  <div class="grid-2">${B49.fld('بودجه مصوب (ریال)',`<input id="pf-budget" type="number" value="${row?row.budget_approved||0:0}">`)}${B49.fld('وضعیت',`<select id="pf-status" style="width:100%;height:42px">${['open','in_progress','done','cancelled'].map(s=>`<option value="${s}" ${(row?row.status:'open')===s?'selected':''}>${({open:'باز',in_progress:'در اجرا',done:'تکمیل',cancelled:'لغو'})[s]}</option>`).join('')}</select>`)}</div>
+  <div class="grid-2">${B49.fld('بودجه مصوب', B49.moneyField('pf-budget', row?row.budget_approved:0, '۵۰,۰۰۰,۰۰۰'))}${B49.fld('وضعیت',`<select id="pf-status" style="width:100%;height:42px">${['open','in_progress','done','cancelled'].map(s=>`<option value="${s}" ${(row?row.status:'open')===s?'selected':''}>${({open:'باز',in_progress:'در اجرا',done:'تکمیل',cancelled:'لغو'})[s]}</option>`).join('')}</select>`)}</div>
   ${B49.fld('توضیحات',`<textarea id="pf-desc" rows="2">${row?row.description||'':''}</textarea>`)}`;
   B49.openModal(row?'ویرایش پروژه':'پروژه جدید',body,`<button class="btn ghost" onclick="B49.closeModal()">انصراف</button><button class="btn primary" id="pf-ok">ذخیره</button>`,true);
-  $('#pf-ok').onclick=async()=>{ const o={name:$('#pf-name').value.trim(),budget_approved:+$('#pf-budget').value||0,status:$('#pf-status').value,description:$('#pf-desc').value||null}; if(!o.name){B49.toast('نام الزامی است.','err');return;} $('#pf-ok').disabled=true;
+  $('#pf-ok').onclick=async()=>{ const o={name:$('#pf-name').value.trim(),budget_approved:B49.moneyVal('pf-budget')||0,status:$('#pf-status').value,description:$('#pf-desc').value||null}; if(!o.name){B49.toast('نام الزامی است.','err');return;} $('#pf-ok').disabled=true;
     let res; if(row) res=await B49.api.update('construction_projects',row.id,o); else res=await B49.api.insert('construction_projects',o);
     if(res){ B49.closeModal(); B49.toast('پروژه ذخیره شد.','ok'); await B49.loadCache(); B49.reroute(); } else $('#pf-ok').disabled=false; };
+
 };
 
 /* =============== PRIOR DEBTS =============== */
@@ -1650,26 +1749,31 @@ B49.PAGES.reports = function(c){
     <div class="grid-3">${cats.map((c,i)=>`<div class="proj-card" onclick='B49.REPORTS[${i}]()'><div class="pc-head"><div class="pc-name">${svg(c.ic,'')} <span style="margin-right:6px">${c.t}</span></div></div><div class="sec" style="font-size:12.5px">${c.d}</div></div>`).join('')}</div>`;
   B49.REPORTS=cats.map(c=>c.fn);
 };
-B49.reportTableDrawer = (title, headers, rows, totals) => {
-  const thtml=`<div class="tbl-scroll" style="max-height:60vh"><table class="tbl"><thead><tr>${headers.map(h=>`<th class="${h.a?'amt':''}">${h.l}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${headers[i].a?'amt':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-  B49.openDrawer(title, thtml, `<button class="btn ghost" onclick="B49.reportDrawerExcel('${title}')">${svg(IC.export)}اکسل</button><button class="btn ghost" onclick="B49.reportDrawerPDF('${title}')">${svg(IC.doc)}PDF</button>`);
+B49.reportTableDrawer = (title, headers, rows, chart) => {
+  const chartHtml = chart ? `<div class="card card-pad" style="margin-bottom:12px"><div class="chart-wrap sm"><canvas id="rd-chart"></canvas></div></div>` : '';
+  const thtml=chartHtml+`<div class="tbl-scroll" style="max-height:48vh"><table class="tbl"><thead><tr>${headers.map(h=>`<th class="${h.a?'amt':''}">${h.l}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${headers[i].a?'amt':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  B49.openDrawer(title, thtml, `<button class="btn ghost" onclick="B49.reportDrawerExcel()">${svg(IC.export)}اکسل</button><button class="btn ghost" onclick="B49.reportDrawerPDF()">${svg(IC.doc)}PDF</button>`);
   B49._lastReport={title,headers,rows};
+  if(chart){ setTimeout(()=>{ const cv=document.getElementById('rd-chart'); if(!cv)return; const cc=B49.chartColors(); B49.makeChart(cv,{type:chart.type,data:{labels:chart.labels,datasets:chart.datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:10,font:{size:11}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:cc.grid},ticks:{callback:v=>B49.fmtShort(v)}}}}}); },60); }
 };
-B49.reportDrawerExcel = (t)=>{ const r=B49._lastReport; if(r) B49.exportExcel(r.rows.map(rv=>{const o={};r.headers.forEach((h,i)=>o[h.l]=rv[i]);return o;}),t,'report'); };
-B49.reportDrawerPDF = (t)=>{ const r=B49._lastReport; if(!r)return; const tbl=`<table><thead><tr>${r.headers.map(h=>`<th class="${h.a?'amt':''}">${h.l}</th>`).join('')}</tr></thead><tbody>${r.rows.map(rv=>`<tr>${rv.map((c,i)=>`<td class="${r.headers[i].a?'amt':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`; B49.exportPDF(t,tbl); };
+B49.reportDrawerExcel = ()=>{ const r=B49._lastReport; if(r) B49.exportExcel(r.rows.map(rv=>{const o={};r.headers.forEach((h,i)=>o[h.l]=rv[i]);return o;}),r.title,'report'); };
+B49.reportDrawerPDF = ()=>{ const r=B49._lastReport; if(!r)return; const tbl=`<table><thead><tr>${r.headers.map(h=>`<th class="${h.a?'amt':''}">${h.l}</th>`).join('')}</tr></thead><tbody>${r.rows.map(rv=>`<tr>${rv.map((c,i)=>`<td class="${r.headers[i].a?'amt':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`; B49.exportPDF(r.title,tbl); };
 B49.reportFundStatement = (fund)=>{ const o=B49.fundOpening(fund),inc=B49.fundIncome(fund),exp=B49.fundExpense(fund); const issued=B49.cache.charges.filter(c=>(c.type||'monthly')===fund).reduce((s,c)=>s+B49.numOr(c.amount_due,0),0);
-  B49.reportTableDrawer('صورت صندوق '+(fund==='monthly'?'ماهانه':'عمرانی'),[{l:'شرح'},{l:'مبلغ',a:1}],[['مانده افتتاحیه',B49.fmt(o)],['شارژ صادرشده',B49.fmt(issued)],['وصول شده',B49.fmt(inc)],['هزینه‌ها',B49.fmt(exp)],['مانده نقدی',B49.fmt(o+inc-exp)]]); };
+  const cc=B49.chartColors();
+  B49.reportTableDrawer('صورت صندوق '+(fund==='monthly'?'ماهانه':'عمرانی'),[{l:'شرح'},{l:'مبلغ',a:1}],[['مانده افتتاحیه',B49.fmt(o)],['شارژ صادرشده',B49.fmt(issued)],['وصول شده',B49.fmt(inc)],['هزینه‌ها',B49.fmt(exp)],['مانده نقدی',B49.fmt(o+inc-exp)]],{type:'doughnut',labels:['افتتاحیه','وصول','هزینه'],datasets:[{data:[o,inc,exp],backgroundColor:[cc.gold,cc.success,cc.warn],borderColor:cc.surface,borderWidth:2}]}); };
 B49.reportDebtors = ()=>{ const rows=B49.cache.units.map(u=>{const m=Math.max(0,B49.unitBalance(u.id,'monthly').bal),c=Math.max(0,B49.unitBalance(u.id,'construction').bal);return{u,m,c,t:m+c};}).filter(r=>r.t>0).sort((a,b)=>b.t-a.t);
-    B49.reportTableDrawer('گزارش بدهکاران',[{l:'واحد'},{l:'بدهی ماهانه',a:1},{l:'بدهی عمرانی',a:1},{l:'مجموع',a:1}],rows.map(r=>[B49.faDigits(r.u.number),B49.fmt(r.m),B49.fmt(r.c),B49.fmt(r.t)])); };
+    const top=rows.slice(0,12); const cc=B49.chartColors();
+    B49.reportTableDrawer('گزارش بدهکاران',[{l:'واحد'},{l:'بدهی ماهانه',a:1},{l:'بدهی عمرانی',a:1},{l:'مجموع',a:1}],rows.map(r=>[B49.faDigits(r.u.number),B49.fmt(r.m),B49.fmt(r.c),B49.fmt(r.t)]),top.length?{type:'bar',labels:top.map(r=>B49.faDigits(r.u.number)),datasets:[{label:'بدهی',data:top.map(r=>r.t),backgroundColor:cc.danger}]}:null); };
 B49.reportSettled = ()=>{ const rows=B49.cache.units.filter(u=>B49.unitTotalDebt(u.id)===0).map(u=>u.number);
     B49.reportTableDrawer('واحدهای تسویه‌شده',[{l:'واحد'}],rows.map(n=>[B49.faDigits(n)])); };
 B49.reportLedger = (kind)=>{ const rows=B49.txnRows().filter(r=>r.kind===kind);
     B49.reportTableDrawer(kind==='pay'?'گزارش درآمد':'گزارش هزینه‌ها',[{l:'تاریخ'},{l:'واحد'},{l:'دوره'},{l:'مبلغ',a:1}],rows.map(r=>[B49.fmtDate(r.date),r.unitNum?B49.faDigits(r.unitNum):'—',r.jmonth?B49.faDigits(r.jmonth):'—',B49.fmt(r.amount)])); };
-B49.reportProjects = ()=>{ const pr=B49.projectReports();
-    B49.reportTableDrawer('بودجه و وصول پروژه‌ها',[{l:'پروژه'},{l:'بودجه',a:1},{l:'صادرشده',a:1},{l:'وصول',a:1},{l:'هزینه',a:1},{l:'مانده نقدی',a:1},{l:'وصول٪'},{l:'اجرا٪'}],pr.map(p=>[p.name,B49.fmt(p.budget),B49.fmt(p.issued),B49.fmt(p.collected),B49.fmt(p.exp),B49.fmt(p.cash),B49.fmtPct(p.collection_progress),B49.fmtPct(p.execution_progress)])); };
+B49.reportProjects = ()=>{ const pr=B49.projectReports(); const cc=B49.chartColors();
+    B49.reportTableDrawer('بودجه و وصول پروژه‌ها',[{l:'پروژه'},{l:'بودجه',a:1},{l:'صادرشده',a:1},{l:'وصول',a:1},{l:'هزینه',a:1},{l:'مانده نقدی',a:1},{l:'وصول٪'},{l:'اجرا٪'}],pr.map(p=>[p.name,B49.fmt(p.budget),B49.fmt(p.issued),B49.fmt(p.collected),B49.fmt(p.exp),B49.fmt(p.cash),B49.fmtPct(p.collection_progress),B49.fmtPct(p.execution_progress)]),pr.length?{type:'bar',labels:pr.map(p=>p.name),datasets:[{label:'بودجه',data:pr.map(p=>p.budget),backgroundColor:cc.gold},{label:'وصول',data:pr.map(p=>p.collected),backgroundColor:cc.success},{label:'هزینه',data:pr.map(p=>p.exp),backgroundColor:cc.warn}]}:null); };
 B49.reportMonthly = ()=>{ const cache=B49.cache,now=B49.jNow(); const months=[];let y=now.y,m=now.m;for(let i=0;i<8;i++){months.unshift({y,m});m--;if(m<1){m=12;y--;}}
-    const rows=months.map(mo=>{const inc=cache.payments.filter(p=>{try{const d=String(p.payment_date).slice(0,10);const[gy,gm]=d.split('-').map(Number);const j=jalaali.toJalaali(gy,gm,1);return j.jy===mo.y&&j.jm===mo.m;}catch(e){return false;}}).reduce((s,p)=>s+B49.numOr(p.amount,0),0);const exp=cache.expenses.filter(e=>{try{const d=String(e.expense_date).slice(0,10);const[gy,gm]=d.split('-').map(Number);const j=jalaali.toJalaali(gy,gm,1);return j.jy===mo.y&&j.jm===mo.m;}catch(e){return false;}}).reduce((s,e)=>s+B49.numOr(e.amount,0),0);return[B49.faDigits(mo.y)+'/'+B49.faDigits(String(mo.m).padStart(2,'0')),B49.fmt(inc),B49.fmt(exp),B49.fmt(inc-exp)];});
-    B49.reportTableDrawer('مقایسه‌ی ماهانه',[{l:'ماه'},{l:'وصول',a:1},{l:'هزینه',a:1},{l:'خالص',a:1}],rows); };
+    const incArr=[],expArr=[],rows=[]; const cc=B49.chartColors();
+    months.forEach(mo=>{const inc=cache.payments.filter(p=>{try{const d=String(p.payment_date).slice(0,10);const[gy,gm]=d.split('-').map(Number);const j=jalaali.toJalaali(gy,gm,1);return j.jy===mo.y&&j.jm===mo.m;}catch(e){return false;}}).reduce((s,p)=>s+B49.numOr(p.amount,0),0);const exp=cache.expenses.filter(e=>{try{const d=String(e.expense_date).slice(0,10);const[gy,gm]=d.split('-').map(Number);const j=jalaali.toJalaali(gy,gm,1);return j.jy===mo.y&&j.jm===mo.m;}catch(e){return false;}}).reduce((s,e)=>s+B49.numOr(e.amount,0),0);incArr.push(inc);expArr.push(exp);rows.push([B49.faDigits(mo.y)+'/'+B49.faDigits(String(mo.m).padStart(2,'0')),B49.fmt(inc),B49.fmt(exp),B49.fmt(inc-exp)]);});
+    B49.reportTableDrawer('مقایسه‌ی ماهانه',[{l:'ماه'},{l:'وصول',a:1},{l:'هزینه',a:1},{l:'خالص',a:1}],rows,{type:'bar',labels:months.map(mo=>B49.jMonthLabel(mo.m).slice(0,4)),datasets:[{label:'وصول',data:incArr,backgroundColor:cc.monthly},{label:'هزینه',data:expArr,backgroundColor:cc.warn}]}); };
 
 /* =============== SETTINGS =============== */
 B49.PAGES.settings = function(c){
@@ -1687,7 +1791,7 @@ B49.PAGES.settings = function(c){
         <div class="grid-2">${B49.fld('شماره کارت',`<input id="st-card" value="${s.card_number||''}">`)}${B49.fld('شماره شبا',`<input id="st-sheba" value="${s.sheba||''}">`)}</div>
       </div>
       <div class="card card-pad"><h3 style="margin:0 0 14px;font-size:15px">مانده‌ی افتتاحیه‌ی صندوق‌ها</h3>
-        <div class="grid-2">${B49.fld('صندوق ماهانه (ریال)',`<input id="st-om" type="number" value="${s.fund_monthly_opening||0}">`)}${B49.fld('صندوق عمرانی (ریال)',`<input id="st-oc" type="number" value="${s.fund_construction_opening||0}">`)}</div>
+        <div class="grid-2">${B49.fld('صندوق ماهانه', B49.moneyField('st-om', s.fund_monthly_opening||0))}${B49.fld('صندوق عمرانی', B49.moneyField('st-oc', s.fund_construction_opening||0))}</div>
         <div class="hint">این مبالغ در محاسبه‌ی موجودی نقدی هر صندوق لحاظ می‌شوند.</div>
       </div>
       <div class="card card-pad"><h3 style="margin:0 0 14px;font-size:15px">ظاهر و حساب</h3>
@@ -1698,7 +1802,7 @@ B49.PAGES.settings = function(c){
       </div>
     </div>
     <div style="margin-top:14px">${B49.isAdmin()?`<button class="btn primary" id="st-save">${svg(IC.check)}ذخیره‌ی تنظیمات</button>`:'<p class="sec" style="font-size:12.5px">ذخیره فقط توسط مدیر ممکن است.</p>'}</div>`;
-  if(B49.isAdmin()) $('#st-save').onclick=async()=>{ const o={building_name:$('#st-name').value,manager_name:$('#st-mgr').value,manager_phone:$('#st-mgp').value,address:$('#st-addr').value,bank_name:$('#st-bank').value,bank_account:$('#st-acc').value,card_number:$('#st-card').value,sheba:$('#st-sheba').value,fund_monthly_opening:+$('#st-om').value||0,fund_construction_opening:+$('#st-oc').value||0};
+  if(B49.isAdmin()) $('#st-save').onclick=async()=>{ const o={building_name:$('#st-name').value,manager_name:$('#st-mgr').value,manager_phone:$('#st-mgp').value,address:$('#st-addr').value,bank_name:$('#st-bank').value,bank_account:$('#st-acc').value,card_number:$('#st-card').value,sheba:$('#st-sheba').value,fund_monthly_opening:B49.moneyVal('st-om')||0,fund_construction_opening:B49.moneyVal('st-oc')||0};
     $('#st-save').disabled=true; const r=await B49.api.update('building_settings',1,o); if(r){ B49.toast('تنظیمات ذخیره شد.','ok'); await B49.loadCache(); } else $('#st-save').disabled=false; };
 };
 </script>
