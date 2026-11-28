@@ -186,6 +186,138 @@ check('۲۴. مانده نهایی عمرانی (مستقل)', { due: 200000 }, 
 // ============ جمع‌بندی: انتقال بین صندوق‌ها پشتیبانی نمی‌شود ============
 check('۲۵. انتقال بین صندوق‌ها (پشتیبانی نمی‌شود)', 'N/A', 'پشتیبانی نمی‌شود', 'پشتیبانی نمی‌شود', 'na');
 
+// ============ ۱۳) تجمیع امن مانده‌ی افتتاحیۀ تکراری (Phase 2 — نسخۀ JS) ============
+// شبیه‌سازی استراتژی reconciliation در migration_v5: برای یک واحد با چند ردیف
+// prior (قربانیِ dedup)، مبالغ باید تجمیع شوند تا هیچ مبلغی از دست نرود.
+const dupPrior = [
+  { unit_id: 1, monthly_initial: 100000, construction_initial: 0,  credit_monthly: 0,     credit_construction: 0, as_of_date: '2024-08-01' },
+  { unit_id: 1, monthly_initial: 200000, construction_initial: 50000, credit_monthly: 0, credit_construction: 0, as_of_date: '2024-09-01' }
+];
+const agg = acc.aggregatePrior(dupPrior);
+check('۲۶. تجمیع ردیف‌های تکراری — monthly=300000', { rows: 2 }, agg[1].monthly_initial, 300000);
+check('۲۷. تجمیع ردیف‌های تکراری — construction=50000', {}, agg[1].construction_initial, 50000);
+check('۲۸. تجمیع — as_of_date earliest (2024-08-01)', {}, agg[1].as_of_date, '2024-08-01');
+// idempotency: اجرای مکرر aggregatePrior روی همان ورودی نتیجۀ یکسان می‌دهد (بدون double-count)
+check('۲۹. تجمیع idempotent — اجرای دوم همان نتیجه', {},
+  JSON.stringify(acc.aggregatePrior(dupPrior)), JSON.stringify(acc.aggregatePrior(dupPrior)));
+// واحد با یک ردیف (بدون تکرار) → بدون تغییر
+check('۳۰. تجمیع — واحد تک‌ردیفی بدون تغییر', { one: 1 },
+  acc.aggregatePrior([{ unit_id: 2, monthly_initial: 700000, construction_initial: 0, credit_monthly: 0, credit_construction: 0, as_of_date: '2024-09-01' }])[2].monthly_initial, 700000);
+// ورودی خالی/نال → نقشۀ خالی
+check('۳۱. تجمیع — ورودی خالی → {}', {}, JSON.stringify(acc.aggregatePrior([])), '{}');
+check('۳۲. تجمیع — ورودی null → {}', {}, JSON.stringify(acc.aggregatePrior(null)), '{}');
+
+// ============ ۱۴) ایزولاسیون کامل دو صندوق (Phase 5) ============
+// اعتبار ماهانه هرگز بدهی عمرانی را خالص نمی‌کند.
+const cIso = cache({
+  prior: [{ unit_id: 1, monthly_initial: 0, construction_initial: 400000, credit_monthly: 300000, credit_construction: 0, as_of_date: '2024-09-01' }]
+});
+check('۳۳. طلب ماهانه، بدهی عمرانی — totalDebt فقط بدهی عمرانی (تهاتر ممنوع)', { credM: 300000, debtC: 400000 },
+  acc.unitTotalDebt(cIso, 1), 400000);
+check('۳۴. طلب ماهانه، بدهی عمرانی — bal ماهانه = -300000 (طلب)', { m: -300000 },
+  acc.unitBalance(cIso, 1, 'monthly').bal, -300000);
+// صندوق با overpayment: fundBalance می‌تواند منفی شود (هزینه > درآمد) ولی NaN نه
+check('۳۵. fundBalance منفی بدون NaN', { inc: 100, exp: 500 },
+  acc.fundBalance(cache({ payments: [{ unit_id: 1, type: 'monthly', amount: 100, payment_date: '2024-10-01' }], expenses: [{ fund: 'monthly', amount: 500 }] }), 'monthly'), -400);
+
+// ============ ۱۵) صحت پروژه‌ی عمرانی (Phase 3) ============
+// فقط پرداخت‌های عمرانی متصل به پروژه → وصول. پرداخت ماهانه با project_id سرگردان → نادیده.
+const proj = [{ id: 7, name: 'آسانسور', budget_approved: 10000000 }];
+const projCharges = [{ project_id: 7, type: 'construction', amount_due: 8000000 }];
+const projPays = [
+  { project_id: 7, type: 'construction', amount: 5000000 }, // وصول معتبر
+  { project_id: 7, type: 'monthly', amount: 1000000 }       // پرداخت ماهانه با project_id → نباید شمرده شود
+];
+const prj = acc.projectReport(proj, projCharges, projPays, [])[0];
+check('۳۶. وصول پروژه فقط پرداخت عمرانی → 5000000 (نه 6000000)', { c: 5000000 }, prj.collected, 5000000);
+check('۳۷. باقی مطالبات پروژه = صادرشده − وصول → 3000000', {}, prj.remaining, 3000000);
+// over-collection (نمایشی در JS): collected > issued → remaining=0، credit=مازاد (نه منفی)
+const prOver = acc.projectReport(proj, [{ project_id: 7, type: 'construction', amount_due: 3000000 }], [{ project_id: 7, type: 'construction', amount: 5000000 }], [])[0];
+check('۳۸. over-collection → remaining=0 (نه منفی)', { issued: 3000000, collected: 5000000 }, prOver.remaining, 0);
+check('۳۹. over-collection → credit=2000000 (مازاد جدا)', {}, prOver.credit, 2000000);
+// پروژه‌ای که هیچ شارژ/پرداختی به آن وصل نیست → issued=collected=remaining=0
+const prEmpty = acc.projectReport([{ id: 99, name: 'خالی', budget_approved: 0 }], [], [], [])[0];
+check('۴۰. پروژه‌ی بدون تراکنش → issued=0, remaining=0, cash=0', { id: 99 },
+  JSON.stringify([prEmpty.issued, prEmpty.remaining, prEmpty.cash]), JSON.stringify([0, 0, 0]));
+// cash پروژه ≠ remaining پروژه (جدایی نقدی از مطالبات)
+check('۴۱. cash ≠ remaining (collected−exp ≠ issued−collected)', { cash: prj.cash, rem: prj.remaining },
+  prj.cash !== prj.remaining, true);
+
+// ============ ۱۶) مقادیر نامعتبر بدون NaN (Phase 5 req 10) ============
+const cBad = cache({
+  charges: [{ unit_id: 1, jmonth: '1403/08', type: 'monthly', amount_due: null }],
+  payments: [{ unit_id: 1, type: 'monthly', amount: undefined, payment_date: null }]
+});
+check('۴۲. مقادیر null/undefined → bal=0 بدون NaN', { due: null, paid: undefined },
+  acc.unitBalance(cBad, 1, 'monthly').bal, 0);
+// مبلغ بسیار بزرگ (در محدودۀ امن Number) → بدون سرریز/NaN
+const big = 9007199254740000;
+check('۴۳. مبلغ بسیار بزرگ — بدون NaN', { big },
+  acc.fundBalance(cache({ payments: [{ unit_id: 1, type: 'monthly', amount: big, payment_date: '2024-10-01' }] }), 'monthly'), big);
+// واحد ناموجود → صفر
+check('۴۴. واحد ناموجود → bal=0', { uid: 9999 }, acc.unitBalance(cache(), 9999, 'monthly').bal, 0);
+
+// ============ ۱۷) تاریخ‌گذاری شارژ بر اساس دوره‌ی حسابداری (Phase 6) ============
+// شارژ متعلق به jmonth باید در همان دوره بنشیند، نه در تاریخ درج (created_at).
+const dtByMonth = acc.jmonthToDate('1403/08', '2024-12-25');
+check('۴۵. شارژ با jmonth ≠ created_at (تاریخ از دوره)', { jmonth: '1403/08', created_at: '2024-12-25' },
+  dtByMonth !== '2024-12-25', true);
+// شارژ بدون jmonth → fallback به created_at
+check('۴۶. شارژ بدون jmonth → fallback created_at', {},
+  acc.jmonthToDate(null, '2024-12-25'), '2024-12-25');
+
+// ============ ۱۸) ترتیب قطعی هم‌تاریخ (Phase 6) ============
+// سه تراکنش هم‌تاریخ: opening → charge → payment (با شکست‌دهی seq).
+const sameDay = [
+  { date: '2024-10-01', fundKey: 'monthly', debit: 100000, credit: 0 },       // opening
+  { date: '2024-10-01', fundKey: 'monthly', debit: 500000, credit: 0 },       // charge
+  { date: '2024-10-01', fundKey: 'monthly', debit: 0,      credit: 200000 }   // payment
+];
+const ordered = acc.runningBalance(sameDay);
+check('۴۷. ترتیب هم‌تاریخ: opening→charge→payment (debit اول=100000)', { first: 100000 },
+  ordered[0].debit, 100000);
+check('۴۸. ترتیب هم‌تاریخ: payment آخر (credit=200000)', { last: 200000 },
+  ordered[2].credit, 200000);
+check('۴۹. عدادار تجمعی هم‌تاریخ: 100→600→400', {},
+  JSON.stringify([ordered[0].run, ordered[1].run, ordered[2].run]), JSON.stringify([100000, 600000, 400000]));
+
+// ============ ۱۹) تطبیق گردش با خلاصۀ حساب (Phase 6 — ledger reconciliation) ============
+// آخرین ماندۀ تجمعی ماهانه باید با unitBalance(monthly).bal یکی باشد.
+const cLedger = cache({
+  prior: [{ unit_id: 1, monthly_initial: 100000, construction_initial: 0, credit_monthly: 0, credit_construction: 0, as_of_date: '2024-09-01' }],
+  charges: [{ unit_id: 1, jmonth: '1403/08', type: 'monthly', amount_due: 500000, created_at: '2024-12-25' }],
+  payments: [{ unit_id: 1, type: 'monthly', amount: 300000, payment_date: '2024-10-05' }]
+});
+const ledgerRows = acc.buildLedgerRows(cLedger, 1);
+const lastMonthlyRun = [...ledgerRows].reverse().find(r => r.fundKey === 'monthly').run;
+check('۵۰. تطبیق گردش با unitBalance — lastRun == bal', { run: lastMonthlyRun, bal: acc.unitBalance(cLedger, 1, 'monthly').bal },
+  lastMonthlyRun, acc.unitBalance(cLedger, 1, 'monthly').bal);
+// مرزبندی ماه: شارژ 1403/08 قبل از شارژ 1403/09 (تاریخ دوره‌ای مرتب)
+const cBoundary = cache({
+  charges: [
+    { unit_id: 1, jmonth: '1403/09', type: 'monthly', amount_due: 200000, created_at: '2024-12-25' },
+    { unit_id: 1, jmonth: '1403/08', type: 'monthly', amount_due: 100000, created_at: '2024-12-25' }
+  ]
+});
+const bRows = acc.buildLedgerRows(cBoundary, 1);
+check('۵۱. مرزبندی ماه — شارژ 1403/08 قبل از 1403/09', {},
+  new Date(bRows[0].date) <= new Date(bRows[1].date), true);
+
+// ============ ۲۰) Rollback با شکست undo (Bug J — حفظ دلیل اصلی audit) ============
+let store2 = { items: [] };
+function opUndoBad() { store2.items.push({ id: 9 }); return { id: 9 }; }
+opUndoBad.undo = function () { throw new Error('undo هم شکست خورد'); };
+let auditErrPreserved = false;
+try { acc.commit(opUndoBad, function () { throw new Error('شکست audit اصلی'); }); }
+catch (e) { auditErrPreserved = /شکست audit اصلی/.test(e.message); }
+check('۵۲. شکست audit + شکست undo → دلیل اصلی audit حفظ می‌شود', {}, auditErrPreserved, true);
+
+// ============ ۲۱) قرارداد ماژول: همه‌ی توابع واقعی موجودند (Phase 1 contract) ============
+const expectedFns = ['unitBalance','unitTotalDebt','fundIncome','fundExpense','fundOpening','fundBalance',
+  'distributeEqual','distributeByArea','projectReport','runningBalance','buildLedgerRows','commit','aggregatePrior'];
+const missing = expectedFns.filter(f => typeof acc[f] !== 'function');
+check('۵۳. ماژول حسابداری همه‌ی توابع را دارد (قرارداد)', { missing }, JSON.stringify(missing), '[]');
+
 // ============ گزارش ============
 console.log('\n═══════════════════════════════════════════════');
 console.log('خلاصه: کل=' + (pass + fail + na) + ' | موفق=' + pass + ' | ناموفق=' + fail + ' | پشتیبانی‌نشده=' + na);
